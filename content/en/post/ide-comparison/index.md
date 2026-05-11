@@ -93,4 +93,4 @@ Feature-rich IDE suite with best-in-class refactoring.
 - Zed: [zed.dev](https://zed.dev)
 - JetBrains: [jetbrains.com](https://jetbrains.com)
 
-*Last updated: May 11, 2026ay 11, 2026ay 12, 2026*
+*Last updated: May 11, 2026ay 11, 2026ay 11, 2026ay 12, 2026*

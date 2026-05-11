@@ -241,7 +241,7 @@
  &gt;aws.amazon.com/q/developer/pricing&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;Community benchmarks from LLM coding evaluations (SWE-bench, HumanEval)&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;&lt;em&gt;Last updated: May 12, 2026 · Data refreshes automatically weekly&lt;/em&gt;&lt;/p&gt;</description></item><item><title>DuckDB vs SQLite vs PostgreSQL: Database Comparison (2026)</title><link>https://devtoolshub.org/en/post/duckdb-vs-sqlite-vs-postgresql-database-comparison-2026/</link><pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/post/duckdb-vs-sqlite-vs-postgresql-database-comparison-2026/</guid><description>&lt;p&gt;Three of the most popular embeddable databases, each optimized for different use cases. Here&amp;rsquo;s how they compare.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Last updated: May 11, 2026ay 11, 2026ay 12, 2026 · Data refreshes automatically weekly&lt;/em&gt;&lt;/p&gt;</description></item><item><title>DuckDB vs SQLite vs PostgreSQL: Database Comparison (2026)</title><link>https://devtoolshub.org/en/post/duckdb-vs-sqlite-vs-postgresql-database-comparison-2026/</link><pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/post/duckdb-vs-sqlite-vs-postgresql-database-comparison-2026/</guid><description>&lt;p&gt;Three of the most popular embeddable databases, each optimized for different use cases. Here&amp;rsquo;s how they compare.&lt;/p&gt;
 &lt;h2 id="quick-comparison"&gt;Quick Comparison
 &lt;/h2&gt;&lt;table&gt;
  &lt;thead&gt;
@@ -424,7 +424,7 @@ conn.execute(&amp;#34;SELECT * FROM users WHERE id = 1&amp;#34;)
 import psycopg2
 conn = psycopg2.connect(dbname=&amp;#39;app&amp;#39;)
 conn.execute(&amp;#34;SELECT * FROM orders WHERE status = &amp;#39;pending&amp;#39;&amp;#34;)
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;em&gt;Last updated: May 12, 2026&lt;/em&gt;&lt;/p&gt;</description></item><item><title>VS Code vs Cursor vs Zed vs JetBrains: IDE Comparison (2026)</title><link>https://devtoolshub.org/en/post/vs-code-vs-cursor-vs-zed-vs-jetbrains-ide-comparison-2026/</link><pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/post/vs-code-vs-cursor-vs-zed-vs-jetbrains-ide-comparison-2026/</guid><description>&lt;p&gt;Choosing the right code editor or IDE can make or break your productivity. Here&amp;rsquo;s how the top four contenders stack up in 2026.&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;em&gt;Last updated: May 11, 2026ay 11, 2026ay 12, 2026&lt;/em&gt;&lt;/p&gt;</description></item><item><title>VS Code vs Cursor vs Zed vs JetBrains: IDE Comparison (2026)</title><link>https://devtoolshub.org/en/post/vs-code-vs-cursor-vs-zed-vs-jetbrains-ide-comparison-2026/</link><pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/post/vs-code-vs-cursor-vs-zed-vs-jetbrains-ide-comparison-2026/</guid><description>&lt;p&gt;Choosing the right code editor or IDE can make or break your productivity. Here&amp;rsquo;s how the top four contenders stack up in 2026.&lt;/p&gt;
 &lt;h2 id="quick-comparison-table"&gt;Quick Comparison Table
 &lt;/h2&gt;&lt;table&gt;
  &lt;thead&gt;
@@ -653,4 +653,4 @@ conn.execute(&amp;#34;SELECT * FROM orders WHERE status = &amp;#39;pending&amp;#
 &lt;li&gt;JetBrains: &lt;a class="link" href="https://jetbrains.com" target="_blank" rel="noopener"
  &gt;jetbrains.com&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;&lt;em&gt;Last updated: May 12, 2026&lt;/em&gt;&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;&lt;em&gt;Last updated: May 11, 2026ay 11, 2026ay 12, 2026&lt;/em&gt;&lt;/p&gt;</description></item></channel></rss>

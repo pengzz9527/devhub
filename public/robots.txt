@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 
 Sitemap: https://devtoolshub.org/sitemap.xml
+Sitemap: https://devtoolshub.org/zh/sitemap.xml
 Sitemap: https://devtoolshub.org/en/sitemap.xml
 
 # 屏蔽管理路径和临时文件
