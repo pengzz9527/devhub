@@ -1,18 +1,18 @@
 baseURL: "https://devtoolshub.org/"
 title: "DevTools Hub"
 theme: "stack"
-defaultContentLanguage: "en"
+defaultContentLanguage: "zh"
 defaultContentLanguageInSubdir: true
 enableRobotsTXT: true
 enableEmoji: true
-hasCJKLanguage: false
+hasCJKLanguage: true
 
 languages:
   en:
     contentDir: "content/en"
     label: "English"
     locale: "en-US"
-    weight: 1
+    weight: 2
     title: "DevTools Hub"
     description: "Honest developer tool comparisons, reviews, and recommendations"
     params:
@@ -45,14 +45,51 @@ languages:
           url: "/en/about/"
           weight: 60
 
+  zh:
+    contentDir: "content/zh"
+    label: "中文"
+    locale: "zh-CN"
+    weight: 1
+    title: "开发者工具对比"
+    description: "开发者工具横向对比、评测与推荐 — 找到最适合你的开发工具"
+    params:
+      sidebar:
+        subtitle: "找到最适合你的开发工具"
+    menu:
+      main:
+        - identifier: home
+          name: "首页"
+          url: "/zh/"
+          weight: 10
+        - identifier: post
+          name: "对比评测"
+          url: "/zh/post/"
+          weight: 20
+        - identifier: categories
+          name: "分类"
+          url: "/zh/categories/"
+          weight: 30
+        - identifier: tags
+          name: "标签"
+          url: "/zh/tags/"
+          weight: 40
+        - identifier: search
+          name: "搜索"
+          url: "/zh/search/"
+          weight: 50
+        - identifier: about
+          name: "关于"
+          url: "/zh/about/"
+          weight: 60
+
 mainSections:
   - "post"
 
 params:
   author: "DevTools Hub Team"
-  description: "Honest developer tool comparisons, reviews, and recommendations"
+  description: "Developer tool comparisons and recommendations"
 
-  # Umami Analytics
+  # Umami Analytics (optional)
   umami:
     serverURL: ""
     websiteID: ""
@@ -60,7 +97,7 @@ params:
   # Footer
   footer:
     since: 2026
-    customText: '<a href="/en/privacy/">Privacy</a> · <a href="/en/terms/">Terms</a>'
+    customText: '<a href="/en/privacy/">Privacy</a> · <a href="/en/terms/">Terms</a> · <a href="/zh/privacy/">隐私</a> · <a href="/zh/terms/">条款</a>'
 
   # Sidebar
   sidebar:
