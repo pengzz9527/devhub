@@ -181,4 +181,4 @@ conn.execute(&amp;#34;SELECT * FROM users WHERE id = 1&amp;#34;)
 import psycopg2
 conn = psycopg2.connect(dbname=&amp;#39;app&amp;#39;)
 conn.execute(&amp;#34;SELECT * FROM orders WHERE status = &amp;#39;pending&amp;#39;&amp;#34;)
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;em&gt;Last updated: May 11, 2026ay 11, 2026ay 12, 2026&lt;/em&gt;&lt;/p&gt;</description></item></channel></rss>
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;em&gt;Last updated: May 11, 2026ay 11, 2026ay 11, 2026ay 12, 2026&lt;/em&gt;&lt;/p&gt;</description></item></channel></rss>
