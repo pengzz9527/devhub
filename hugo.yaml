@@ -1,0 +1,159 @@
+baseURL: "https://devtoolshub.org/"
+title: "DevTools Hub"
+theme: "stack"
+defaultContentLanguage: "en"
+defaultContentLanguageInSubdir: true
+enableRobotsTXT: true
+enableEmoji: true
+hasCJKLanguage: false
+
+languages:
+  en:
+    contentDir: "content/en"
+    label: "English"
+    locale: "en-US"
+    weight: 1
+    title: "DevTools Hub"
+    description: "Honest developer tool comparisons, reviews, and recommendations"
+    params:
+      sidebar:
+        subtitle: "Find the best tools for your stack"
+    menu:
+      main:
+        - identifier: home
+          name: "Home"
+          url: "/en/"
+          weight: 10
+        - identifier: post
+          name: "Comparisons"
+          url: "/en/post/"
+          weight: 20
+        - identifier: categories
+          name: "Categories"
+          url: "/en/categories/"
+          weight: 30
+        - identifier: tags
+          name: "Tags"
+          url: "/en/tags/"
+          weight: 40
+        - identifier: search
+          name: "Search"
+          url: "/en/search/"
+          weight: 50
+        - identifier: about
+          name: "About"
+          url: "/en/about/"
+          weight: 60
+
+mainSections:
+  - "post"
+
+params:
+  author: "DevTools Hub Team"
+  description: "Honest developer tool comparisons, reviews, and recommendations"
+
+  # Umami Analytics
+  umami:
+    serverURL: ""
+    websiteID: ""
+
+  # Footer
+  footer:
+    since: 2026
+    customText: '<a href="/en/privacy/">Privacy</a> · <a href="/en/terms/">Terms</a>'
+
+  # Sidebar
+  sidebar:
+    compact: false
+    avatar: ""
+
+  # Article display
+  article:
+    readingTime: true
+    toc: true
+    math: false
+    headingAnchor: false
+    list:
+      showTags: true
+    license:
+      enabled: true
+      default: "Licensed under CC BY-NC-SA 4.0"
+
+  # Widgets: homepage sidebar
+  widgets:
+    homepage:
+      - type: search
+      - type: categories
+        params:
+          limit: 10
+      - type: tag-cloud
+        params:
+          limit: 20
+    page:
+      - type: profile
+      - type: toc
+
+  # Search
+  search:
+    enabled: true
+    provider: "fuse"
+    fuse:
+      isCaseSensitive: false
+      threshold: 0.4
+      distance: 100
+
+  # Color scheme
+  colorScheme:
+    toggle: true
+    default: "auto"
+
+  # Image processing
+  imageProcessing:
+    content:
+      enabled: false
+
+  # Google AdSense
+  googleAdSense:
+    publisherID: ""
+
+  # Comments
+  comments:
+    enabled: false
+
+  # Meta
+  opengraph:
+    twitter:
+      site: ""
+      card: "summary_large_image"
+
+  # Cookie consent (GDPR)
+  cookies:
+    enabled: false
+
+permalinks:
+  post: "/:section/:slug/"
+
+taxonomies:
+  category: categories
+  tag: tags
+
+markup:
+  highlight:
+    noClasses: false
+  goldmark:
+    renderer:
+      unsafe: true
+
+outputs:
+  home:
+    - HTML
+    - RSS
+  section:
+    - HTML
+    - RSS
+  taxonomy:
+    - HTML
+    - RSS
+  term:
+    - HTML
+    - RSS

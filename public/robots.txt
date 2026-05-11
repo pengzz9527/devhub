@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://devtoolshub.org/sitemap.xml
+Sitemap: https://devtoolshub.org/en/sitemap.xml
+
+# 屏蔽管理路径和临时文件
+Disallow: /admin/
+Disallow: /tmp/
+Disallow: /*.pdf$
