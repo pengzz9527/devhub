@@ -1,1 +1,27 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Categories on DevTools Hub</title><link>https://devtoolshub.org/en/categories/</link><description>Recent content in Categories on DevTools Hub</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 12 May 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://devtoolshub.org/en/categories/index.xml" rel="self" type="application/rss+xml"/><item><title>AI Tools</title><link>https://devtoolshub.org/en/categories/ai-tools/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/categories/ai-tools/</guid><description/></item><item><title>Databases</title><link>https://devtoolshub.org/en/categories/databases/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/categories/databases/</guid><description/></item><item><title>Developer Tools</title><link>https://devtoolshub.org/en/categories/developer-tools/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://devtoolshub.org/en/categories/developer-tools/</guid><description/></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Categories on DevTools Hub</title>
+        <link>http://localhost:1315/en/categories/</link>
+        <description>Recent content in Categories on DevTools Hub</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>en-US</language>
+        <lastBuildDate>Tue, 12 May 2026 00:00:00 +0000</lastBuildDate><atom:link href="http://localhost:1315/en/categories/index.xml" rel="self" type="application/rss+xml" /><item>
+            <title>AI Tools</title>
+            <link>http://localhost:1315/en/categories/ai-tools/</link>
+            <pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate>
+            <guid>http://localhost:1315/en/categories/ai-tools/</guid>
+            <description></description>
+        </item><item>
+            <title>Databases</title>
+            <link>http://localhost:1315/en/categories/databases/</link>
+            <pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate>
+            <guid>http://localhost:1315/en/categories/databases/</guid>
+            <description></description>
+        </item><item>
+            <title>Developer Tools</title>
+            <link>http://localhost:1315/en/categories/developer-tools/</link>
+            <pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate>
+            <guid>http://localhost:1315/en/categories/developer-tools/</guid>
+            <description></description>
+        </item></channel>
+</rss>

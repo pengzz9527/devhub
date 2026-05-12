@@ -1,4 +1,4 @@
-baseURL: "https://devtoolshub.org/"
+baseURL: "https://devhub.vercel.app/"
 title: "DevTools Hub"
 theme: "stack"
 defaultContentLanguage: "zh"
