@@ -54,8 +54,8 @@
       "zh_tags": ["监控", "Datadog", "Grafana", "Sentry", "New Relic", "可观测性", "DevOps", "对比"],
       "en_category": "DevOps",
       "zh_category": "DevOps",
-      "status": "pending",
-      "publish_date": null
+      "status": "published",
+      "publish_date": "2026-05-16"
     },
     {
       "id": 8,
