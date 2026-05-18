@@ -123,4 +123,4 @@ Based on community testing and published benchmarks:
 - Amazon Q pricing: [aws.amazon.com/q/developer/pricing](https://aws.amazon.com/q/developer/pricing)
 - Community benchmarks from LLM coding evaluations (SWE-bench, HumanEval)
 
-*Last updated: May 11, 2026ay 11, 2026ay 11, 2026ay 12, 2026 · Data refreshes automatically weekly*
+*Last updated: May 18, 2026ay 11, 2026ay 11, 2026ay 11, 2026ay 12, 2026 · Data refreshes automatically weekly*
