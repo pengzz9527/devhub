@@ -82,8 +82,8 @@
       "zh_tags": ["Python", "FastAPI", "Django", "Flask", "Litestar", "Web框架", "后端", "对比"],
       "en_category": "Web Development",
       "zh_category": "Web开发",
-      "status": "pending",
-      "publish_date": null
+      "status": "published",
+      "publish_date": "2026-05-21"
     },
     {
       "id": 10,
