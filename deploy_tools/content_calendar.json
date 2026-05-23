@@ -96,8 +96,8 @@
       "zh_tags": ["数据库", "DBeaver", "DataGrip", "TablePlus", "Beekeeper", "SQL", "对比"],
       "en_category": "Databases",
       "zh_category": "数据库",
-      "status": "pending",
-      "publish_date": null
+      "status": "published",
+      "publish_date": "2026-05-23"
     }
   ]
 }
