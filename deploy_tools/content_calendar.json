@@ -98,6 +98,48 @@
       "zh_category": "数据库",
       "status": "published",
       "publish_date": "2026-05-23"
+    },
+    {
+      "id": 11,
+      "slug": "ai-code-assistant-comparison",
+      "en_title": "GitHub Copilot vs Cursor vs Codeium vs Windsurf vs Amazon Q: AI Coding Assistant Comparison (2026)",
+      "zh_title": "GitHub Copilot vs Cursor vs Codeium vs Windsurf vs Amazon Q：AI 编程助手对比（2026）",
+      "en_description": "Compare GitHub Copilot, Cursor, Codeium, Windsurf, and Amazon Q Developer — the five leading AI coding assistants. Features, pricing, accuracy, and which to choose in 2026.",
+      "zh_description": "全面对比 GitHub Copilot、Cursor、Codeium、Windsurf 和 Amazon Q Developer 五大 AI 编程助手。功能、价格、准确率与选型建议。",
+      "en_tags": ["AI", "GitHub Copilot", "Cursor", "Codeium", "Windsurf", "Amazon Q", "Coding Assistant", "Comparison"],
+      "zh_tags": ["AI", "GitHub Copilot", "Cursor", "Codeium", "Windsurf", "Amazon Q", "编程助手", "对比"],
+      "en_category": "Developer Tools",
+      "zh_category": "开发者工具",
+      "status": "published",
+      "publish_date": "2026-06-16"
+    },
+    {
+      "id": 12,
+      "slug": "ide-comparison",
+      "en_title": "VS Code vs Cursor vs Zed vs JetBrains: IDE Comparison (2026)",
+      "zh_title": "VS Code vs Cursor vs Zed vs JetBrains：IDE 集成开发环境对比（2026）",
+      "en_description": "Compare VS Code, Cursor, Zed, and JetBrains IDEs for modern development. Features, performance, pricing, and which to choose.",
+      "zh_description": "对比 VS Code、Cursor、Zed 和 JetBrains 四大集成开发环境。功能、性能、价格与选型建议。",
+      "en_tags": ["IDE", "VS Code", "Cursor", "Zed", "JetBrains", "Editor", "Comparison"],
+      "zh_tags": ["IDE", "VS Code", "Cursor", "Zed", "JetBrains", "编辑器", "对比"],
+      "en_category": "Developer Tools",
+      "zh_category": "开发者工具",
+      "status": "pending",
+      "publish_date": null
+    },
+    {
+      "id": 13,
+      "slug": "database-comparison",
+      "en_title": "DuckDB vs SQLite vs PostgreSQL: Database Comparison (2026)",
+      "zh_title": "DuckDB vs SQLite vs PostgreSQL：数据库对比（2026）",
+      "en_description": "Compare DuckDB, SQLite, and PostgreSQL for analytics, embedded, and production use cases. Performance, features, and pricing.",
+      "zh_description": "对比 DuckDB、SQLite 和 PostgreSQL 在分析型、嵌入式和生产场景的表现。性能、功能与选型建议。",
+      "en_tags": ["DuckDB", "SQLite", "PostgreSQL", "Database", "Analytics", "Comparison"],
+      "zh_tags": ["DuckDB", "SQLite", "PostgreSQL", "数据库", "分析", "对比"],
+      "en_category": "Databases",
+      "zh_category": "数据库",
+      "status": "pending",
+      "publish_date": null
     }
   ]
 }
