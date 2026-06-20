@@ -138,8 +138,8 @@
       "zh_tags": ["DuckDB", "SQLite", "PostgreSQL", "数据库", "分析", "对比"],
       "en_category": "Databases",
       "zh_category": "数据库",
-      "status": "pending",
-      "publish_date": null
+      "status": "published",
+      "publish_date": "2026-06-20"
     }
   ]
 }
