@@ -271,4 +271,4 @@ While the databases themselves are free, consider these additional costs:
 
 ---
 
-*Last updated: 2026-06-20*
+*Last updated: June 22, 2026-06-20*
