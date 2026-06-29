@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="每天一个 DuckDB 实战技巧。今天教你如何用 generate_series + LAST_VALUE IGNORE NULLS 完美补全缺失的时间序列数据。">
+<title>📊 DuckDB 实战笔记｜2026-06-25：用 DuckDB 一行 SQL 补全时间序列</title>
+
+
+<link rel="canonical" href="https://devhub.vercel.app/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-25%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C-sql-%E8%A1%A5%E5%85%A8%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+
+
+<link rel="stylesheet" href="/scss/style.min.13ff893da039959c0973f4d0196edb0a0ac2dc140d0bf2bbc65559cf150123a4.css"><meta property='og:title' content="📊 DuckDB 实战笔记｜2026-06-25：用 DuckDB 一行 SQL 补全时间序列">
+<meta property='og:description' content="每天一个 DuckDB 实战技巧。今天教你如何用 generate_series + LAST_VALUE IGNORE NULLS 完美补全缺失的时间序列数据。">
+<meta property='og:url' content='https://devhub.vercel.app/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-25%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C-sql-%E8%A1%A5%E5%85%A8%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/'>
+<meta property='og:site_name' content='开发者工具对比'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='DuckDB' /><meta property='article:tag' content='时间序列' /><meta property='article:tag' content='数据补全' /><meta property='article:tag' content='SQL' /><meta property='article:tag' content='实战' /><meta property='article:published_time' content='2026-06-25T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2026-06-25T00:00:00&#43;00:00'/>
+<meta name="twitter:title" content="📊 DuckDB 实战笔记｜2026-06-25：用 DuckDB 一行 SQL 补全时间序列">
+<meta name="twitter:description" content="每天一个 DuckDB 实战技巧。今天教你如何用 generate_series + LAST_VALUE IGNORE NULLS 完美补全缺失的时间序列数据。">
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/zh/">开发者工具对比</a></h1>
+            <h2 class="site-description">找到最适合你的开发工具</h2>
+        </div>
+    </header><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/zh/' >
+                
+                <span>首页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/post/' >
+                
+                <span>对比评测</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/categories/' >
+                
+                <span>分类</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/tags/' >
+                
+                <span>标签</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/search/' >
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/about/' >
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+                    <li id="i18n-switch">  
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M4 5h7" />
+  <path d="M9 3v2c0 4.418 -2.239 8 -5 8" />
+  <path d="M5 9c-.003 2.144 2.952 3.908 6.7 4" />
+  <path d="M12 20l4 -9l4 9" />
+  <path d="M19.1 18h-6.2" />
+</svg>
+
+
+
+                        <select name="language" title="language" onchange="window.location.href = this.selectedOptions[0].value">
+                            
+                                
+                                
+                                    
+                                        
+                                    
+                                
+                                <option value="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-25%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C-sql-%E8%A1%A5%E5%85%A8%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/" selected>中文</option>
+                            
+                                
+                                
+                                    
+                                
+                                <option value="/en/" >English</option>
+                            
+                        </select>
+                    </li>
+                
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+            
+        
+            
+                
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            
+            
+            
+            <a href="/zh/categories/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B0/" style="background-color: hsl(188, 60%, 84%); color: hsl(188, 60%, 15%);">
+                DuckDB 实战笔记
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-25%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C-sql-%E8%A1%A5%E5%85%A8%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/">📊 DuckDB 实战笔记｜2026-06-25：用 DuckDB 一行 SQL 补全时间序列</a>
+        </h2>
+    
+        
+        <h3 class="article-subtitle">
+            每天一个 DuckDB 实战技巧。今天教你如何用 generate_series &#43; LAST_VALUE IGNORE NULLS 完美补全缺失的时间序列数据。
+        </h3>
+        
+    </div>
+
+    
+    
+    
+    
+    
+    
+    
+    <footer class="article-meta">
+        
+            <div class="inline-meta">
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                    <time class="article-time--published" datetime='2026-06-25T00:00:00Z'>2026年6月25日星期四</time>
+                
+
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                    <time class="article-time--reading">
+                        阅读时长: 3 分钟
+                    </time>
+                
+            </div>
+        
+
+        
+
+        
+    </footer>
+    
+</div>
+
+</header>
+
+    
+
+    <section class="article-content">
+    
+    
+    <h1 id="-duckdb-实战笔记--2026-06-25">📊 DuckDB 实战笔记 ｜ 2026-06-25
+</h1>
+    <blockquote>
+        <p><strong>每天一个 DuckDB 实战技巧，让你立刻能用。</strong></p>
+
+    </blockquote>
+<hr>
+<h2 id="-今日话题用-duckdb-补全缺失的时间序列">🔥 今日话题：用 DuckDB 补全缺失的时间序列
+</h2><p>你有没有遇到过这种报表需求：</p>
+
+    <blockquote>
+        <p>&ldquo;帮我拉一下上周每天的销售额，没有销售的日子也要显示，填 0。&rdquo;</p>
+
+    </blockquote>
+<p>你的第一反应是什么？写个 Python 脚本，生成日期列表，然后逐个查数据库？还是手动创建连续日期再 LEFT JOIN？</p>
+<p><strong>用 DuckDB，一条 SQL 就能搞定，而且支持多种补全策略。</strong></p>
+<hr>
+<h2 id="-问题场景">📋 问题场景
+</h2><p>假设你有一张订单表 <code>sales</code>，只有有交易的日期才有记录：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales</span><span class="p">(</span><span class="k">day</span><span class="w"> </span><span class="nb">DATE</span><span class="p">,</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="n">DOUBLE</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="k">VALUES</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-03&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-05&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></div><div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>day</th>
+          <th>product</th>
+          <th>amount</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>2024-01-01</td>
+          <td>A</td>
+          <td>100</td>
+      </tr>
+      <tr>
+          <td>2024-01-03</td>
+          <td>A</td>
+          <td>200</td>
+      </tr>
+      <tr>
+          <td>2024-01-05</td>
+          <td>A</td>
+          <td>300</td>
+      </tr>
+  </tbody>
+</table></div>
+<p>老板要的是 <strong>1月1日到1月5日每天都有数据</strong>，但中间缺了 1月2日和1月4日。</p>
+<hr>
+<h2 id="-方案一补-0最常用">💡 方案一：补 0（最常用）
+</h2><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">WITH</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">unnest</span><span class="p">(</span><span class="n">generate_series</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">,</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-05&#39;</span><span class="p">,</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1&#39;</span><span class="w"> </span><span class="k">DAY</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">amount</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="n">d</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>结果：</strong></p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>day</th>
+          <th>amount</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>2024-01-01</td>
+          <td>100</td>
+      </tr>
+      <tr>
+          <td>2024-01-02</td>
+          <td>0</td>
+      </tr>
+      <tr>
+          <td>2024-01-03</td>
+          <td>200</td>
+      </tr>
+      <tr>
+          <td>2024-01-04</td>
+          <td>0</td>
+      </tr>
+      <tr>
+          <td>2024-01-05</td>
+          <td>300</td>
+      </tr>
+  </tbody>
+</table></div>
+<p><strong>核心思路：</strong> 先生成完整日期序列 → LEFT JOIN 原表 → COALESCE 填补 NULL。</p>
+<hr>
+<h2 id="-方案二前向填充last-observation-carried-forward">💡 方案二：前向填充（Last Observation Carried Forward）
+</h2><p>很多业务场景下，&ldquo;没有新数据&quot;意味着&quot;沿用上次的数据&rdquo;。比如股价、库存量、用户活跃度。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">WITH</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">unnest</span><span class="p">(</span><span class="n">generate_series</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">,</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-01-05&#39;</span><span class="p">,</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1&#39;</span><span class="w"> </span><span class="k">DAY</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">LAST_VALUE</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="k">IGNORE</span><span class="w"> </span><span class="n">NULLS</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">forward_filled</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="n">d</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>结果：</strong></p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>day</th>
+          <th>forward_filled</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>2024-01-01</td>
+          <td>100</td>
+      </tr>
+      <tr>
+          <td>2024-01-02</td>
+          <td>100 ← 沿用前一天的值</td>
+      </tr>
+      <tr>
+          <td>2024-01-03</td>
+          <td>200</td>
+      </tr>
+      <tr>
+          <td>2024-01-04</td>
+          <td>200 ← 沿用前一天的值</td>
+      </tr>
+      <tr>
+          <td>2024-01-05</td>
+          <td>300</td>
+      </tr>
+  </tbody>
+</table></div>
+<p><strong>杀手锏是 <code>IGNORE NULLS</code></strong> —— 窗口函数会跳过 NULL 值，取最后一个非空值。</p>
+<hr>
+<h2 id="-方案三自动获取日期范围">💡 方案三：自动获取日期范围
+</h2><p>上面的例子中，起止日期是硬编码的。实际业务中，你通常希望 <strong>自动取数据的最小/最大日期</strong>：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">WITH</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">unnest</span><span class="p">(</span><span class="n">generate_series</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="k">MIN</span><span class="p">(</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="k">MAX</span><span class="p">(</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1&#39;</span><span class="w"> </span><span class="k">DAY</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">LAST_VALUE</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="k">IGNORE</span><span class="w"> </span><span class="n">NULLS</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">forward_filled</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="n">d</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>一条 SQL，自动适配任何时间范围。</strong></p>
+<hr>
+<h2 id="-关键函数解析">🧠 关键函数解析
+</h2><h3 id="generate_seriesstart-end-interval"><code>generate_series(start, end, interval)</code>
+</h3><p>生成一个包含起始到结束所有值的序列。支持：</p>
+<ul>
+<li>日期：<code>INTERVAL '1' DAY</code></li>
+<li>小时：<code>INTERVAL '1' HOUR</code></li>
+<li>分钟：<code>INTERVAL '5' MINUTE</code></li>
+</ul>
+<h3 id="unnestarray"><code>unnest(array)</code>
+</h3><p>把数组展开为多行。因为 <code>generate_series</code> 返回的是一个数组，需要用 <code>unnest</code> 拆成行。</p>
+<h3 id="last_value-ignore-nulls"><code>LAST_VALUE(...) IGNORE NULLS</code>
+</h3><p>窗口函数的高级用法。默认情况下窗口函数会把 NULL 当作有效值，加上 <code>IGNORE NULLS</code> 后，它会跳过所有 NULL，返回最近的一个非空值。</p>
+<h3 id="rows-between-unbounded-preceding-and-current-row"><code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>
+</h3><p>定义窗口范围：从第一行到当前行。配合 <code>IGNORE NULLS</code> 实现前向填充。</p>
+<hr>
+<h2 id="-在-python-中使用">🚀 在 Python 中使用
+</h2><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 读取数据</span>
+</span></span><span class="line"><span class="cl"><span class="n">conn</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    CREATE TABLE sales AS SELECT * FROM read_csv_auto(&#39;sales.csv&#39;)
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 前向填充时间序列</span>
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    WITH dates AS (
+</span></span></span><span class="line"><span class="cl"><span class="s2">        SELECT unnest(generate_series(
+</span></span></span><span class="line"><span class="cl"><span class="s2">            (SELECT MIN(day) FROM sales),
+</span></span></span><span class="line"><span class="cl"><span class="s2">            (SELECT MAX(day) FROM sales),
+</span></span></span><span class="line"><span class="cl"><span class="s2">            INTERVAL &#39;1&#39; DAY
+</span></span></span><span class="line"><span class="cl"><span class="s2">        )) AS day
+</span></span></span><span class="line"><span class="cl"><span class="s2">    )
+</span></span></span><span class="line"><span class="cl"><span class="s2">    SELECT 
+</span></span></span><span class="line"><span class="cl"><span class="s2">        d.day,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        LAST_VALUE(s.amount IGNORE NULLS) OVER (
+</span></span></span><span class="line"><span class="cl"><span class="s2">            ORDER BY d.day 
+</span></span></span><span class="line"><span class="cl"><span class="s2">            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+</span></span></span><span class="line"><span class="cl"><span class="s2">        ) AS forward_filled
+</span></span></span><span class="line"><span class="cl"><span class="s2">    FROM dates d
+</span></span></span><span class="line"><span class="cl"><span class="s2">    LEFT JOIN sales s ON d.day = s.day
+</span></span></span><span class="line"><span class="cl"><span class="s2">    ORDER BY d.day
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchdf</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span></span></code></pre></div><p><strong>注意：</strong> 不需要先生成日期 DataFrame 再合并，DuckDB 内部完成所有操作，性能远超 Pandas 的 <code>reindex</code>。</p>
+<hr>
+<h2 id="-三种补全策略对比">📝 三种补全策略对比
+</h2><div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>策略</th>
+          <th>适用场景</th>
+          <th>核心函数</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>补 0</strong></td>
+          <td>销售额、订单数等计数类指标</td>
+          <td><code>COALESCE(col, 0)</code></td>
+      </tr>
+      <tr>
+          <td><strong>前向填充</strong></td>
+          <td>股价、库存、用户状态等</td>
+          <td><code>LAST_VALUE(...) IGNORE NULLS</code></td>
+      </tr>
+      <tr>
+          <td><strong>线性插值</strong></td>
+          <td>传感器数据、温度等连续物理量</td>
+          <td>需要额外计算（见下方）</td>
+      </tr>
+  </tbody>
+</table></div>
+<h3 id="进阶线性插值">进阶：线性插值
+</h3><p>如果需要更精确的填充（比如在两个已知点之间线性插值），可以这样：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">WITH</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">unnest</span><span class="p">(</span><span class="n">generate_series</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="k">MIN</span><span class="p">(</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="k">MAX</span><span class="p">(</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1&#39;</span><span class="w"> </span><span class="k">DAY</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">joined</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">LAG</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_val</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">LAG</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">LEAD</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">next_val</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">LEAD</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">next_day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">dates</span><span class="w"> </span><span class="n">d</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">d</span><span class="p">.</span><span class="k">day</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="k">day</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">day</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">CASE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">WHEN</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">amount</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">WHEN</span><span class="w"> </span><span class="n">prev_val</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">next_val</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">THEN</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">prev_val</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">next_val</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev_val</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="k">day</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev_day</span><span class="p">)::</span><span class="n">DOUBLE</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">next_day</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev_day</span><span class="p">)::</span><span class="n">DOUBLE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">WHEN</span><span class="w"> </span><span class="n">prev_val</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">prev_val</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">WHEN</span><span class="w"> </span><span class="n">next_val</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">next_val</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">interpolated</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">joined</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">day</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p>利用 <code>LAG</code> 和 <code>LEAD</code> 获取前后值，然后用公式 <code>(y2-y1)/(x2-x1)</code> 线性插值。</p>
+<hr>
+<h2 id="-互动">💬 互动
+</h2><p>你的报表里最常见的缺失数据问题是什么？补 0、前向填充、还是其他策略？留言告诉我！</p>
+<hr>
+<p><em>📌 收藏这条笔记，下次做日报/周报数据补全时直接回来参考。</em></p>
+<hr>
+<p><em>© 2026 DuckDB 实战笔记 ｜ 每天进步一点点</em></p>
+
+</section>
+
+
+    <footer class="article-meta article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/zh/tags/duckdb/">DuckDB</a>
+        
+            <a href="/zh/tags/%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/">时间序列</a>
+        
+            <a href="/zh/tags/%E6%95%B0%E6%8D%AE%E8%A1%A5%E5%85%A8/">数据补全</a>
+        
+            <a href="/zh/tags/sql/">SQL</a>
+        
+            <a href="/zh/tags/%E5%AE%9E%E6%88%98/">实战</a>
+        
+    </section>
+
+
+    
+    <section class="article-copyright inline-meta">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <path d="M14.5 9a3.5 4 0 1 0 0 6" />
+</svg>
+
+
+
+        <span>Licensed under CC BY-NC-SA 4.0</span>
+    </section>
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside>
+    <h2 class="section-title">相关文章</h2>
+    <div class="subsection-list">
+        <div class="article-list--tile">
+            
+                
+<article class="">
+    <a href="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-23%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%E6%B8%85%E6%B4%97%E8%84%8F-csv-%E6%95%B0%E6%8D%AE/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">📊 DuckDB 实战笔记｜2026-06-23：用 DuckDB 一行代码清洗脏 CSV 数据</h2>
+        </div>
+    </a>
+</article>
+            
+                
+<article class="">
+    <a href="/zh/post/duckdb-vs-sqlite-vs-postgresql%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AF%B9%E6%AF%942026/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">DuckDB vs SQLite vs PostgreSQL：数据库对比（2026）</h2>
+        </div>
+    </a>
+</article>
+            
+                
+<article class="">
+    <a href="/zh/post/dbeaver-vs-datagrip-vs-tableplus-vs-beekeeper%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AF%B9%E6%AF%942026/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">DBeaver vs DataGrip vs TablePlus vs Beekeeper：数据库客户端对比（2026）</h2>
+        </div>
+    </a>
+</article>
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2026 开发者工具对比
+    </section>
+    
+    <section class="powerby">
+        
+            <a href="/en/privacy/">Privacy</a> · <a href="/en/terms/">Terms</a> · <a href="/zh/privacy/">隐私</a> · <a href="/zh/terms/">条款</a> <br/>
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="4.0.2">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+
+
+
+<script type="module">
+    import gallery from '\/ts\/gallery.js';
+
+    const articleContent = document.querySelector('.article-content');
+    const shouldLoad = articleContent && (articleContent.querySelectorAll('figure').length > 0 || articleContent.querySelectorAll('img.gallery-image').length > 0);
+    
+    if (shouldLoad) {
+        gallery(articleContent);
+
+        const PhotoSwipeLightbox = (await import("https:\/\/cdn.jsdelivr.net\/npm\/photoswipe@5.4.4\/dist\/photoswipe-lightbox.esm.min.js")).default;
+        const styleHref = "https:\/\/cdn.jsdelivr.net\/npm\/photoswipe@5.4.4\/dist\/photoswipe.css";
+
+        const styleTag = document.createElement('link');
+        styleTag.rel = 'stylesheet';
+        styleTag.href = styleHref;
+        document.head.appendChild(styleTag);
+
+        const lightbox = new PhotoSwipeLightbox({
+            gallerySelector: '.article-content',
+            childSelector: 'figure a.image-link',
+            pswpModule: () => import("https:\/\/cdn.jsdelivr.net\/npm\/photoswipe@5.4.4\/dist\/photoswipe.esm.min.js")
+        });
+        lightbox.init();
+    }
+</script>
+
+    
+
+            </main>
+        </div>
+        
+<script type="text/javascript" src="/ts/main.f856840516f7c2ad1769a8f5937e3d08d6cb386e2cd2dd025ae696e0ff207958.js" defer></script>
+
+
+    </body>
+</html>
