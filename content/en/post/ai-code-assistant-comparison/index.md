@@ -183,4 +183,4 @@ Based on community testing and published evaluations (SWE-bench, HumanEval+, MBP
 - GitHub data: [github.com/microsoft/vscode](https://github.com/microsoft/vscode), [github.com/getcursor/cursor](https://github.com/getcursor/cursor), [github.com/Exafunction/codeium](https://github.com/Exafunction/codeium)
 - Benchmarks: SWE-bench, HumanEval+, MBPP community evaluations (June 2026)
 
-*Last updated: June 29, 2026une 22, 2026une 16, 2026*
+*Last updated: July 06, 2026une 29, 2026une 22, 2026une 16, 2026*
