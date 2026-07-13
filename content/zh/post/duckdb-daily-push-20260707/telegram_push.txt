@@ -1,0 +1,97 @@
+📊 DuckDB 实战笔记 ｜ 2026-07-07
+━━━━━━━━━━━━━━━━━━━━━━━
+
+🔥 今日话题：用 DuckDB 优雅地吃透 JSON 数据
+
+你是否经历过：API 返回嵌套 JSON，在 Python 里写三层 for 循环遍历？或者日志文件全是 JSON，json.loads() 之后数据结构参差不齐，程序直接崩掉？
+
+用 DuckDB，一条 SQL 直接搞定。
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 场景：电商订单日志
+
+假设有一个 orders.jsonl 文件，每行一个 JSON 对象，包含嵌套的 user.address、items[] 数组等。第 5 条数据甚至缺少 address 字段——这就是真实数据。
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 第一步：直接读 JSON 文件
+
+SELECT * FROM read_json_auto('orders.jsonl');
+
+read_json_auto() 自动检测格式、推断 schema，不需要提前定义列结构。
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 第二步：提取嵌套字段
+
+SELECT order_id, user.name, user.address.city, total
+FROM read_json_auto('orders.jsonl');
+
+深层嵌套直接点号访问。Diana 没有 address 字段？返回 NULL，不报错。
+
+不确定字段是否存在？用 ->> 安全运算符：
+user->>'name' AS name
+user->>'address'->>'city' AS city
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 第三步：展开数组（重点！）
+
+SELECT order_id, item.product, item.qty, item.price,
+       item.qty * item.price AS line_total
+FROM read_json_auto('orders.jsonl'),
+     UNNEST(items) AS item;
+
+关键就一行：, UNNEST(items) AS item
+数组炸开成多行，类似 SQL Server 的 CROSS APPLY。
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 第四步：JSON 聚合——把行拍回 JSON
+
+按城市聚合订单，打包成 JSON 数组：
+
+SELECT user.address.city AS city,
+       COUNT(*) AS order_count,
+       SUM(total) AS total_revenue,
+       json_group_array(
+           json_object('order_id', order_id,
+                       'user', user.name,
+                       'total', total,
+                       'status', status)
+       ) AS orders_json
+FROM read_json_auto('orders.jsonl')
+GROUP BY user.address.city;
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 第五步：解析字符串里的 JSON
+
+SELECT json_extract_string(log_data, '$.level') AS level,
+       json_extract_string(log_data, '$.message') AS msg
+FROM logs_table;
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+🧠 JSON 函数速查
+
+• read_json_auto() — 直接读 JSON 文件
+• json_extract_string(json, path) — 提取字符串
+• json_extract(json, path) — 提取任意类型
+• ->> — 安全访问运算符
+• json_object(k, v...) — 构造 JSON 对象
+• json_group_array() — 聚合为 JSON 数组
+• json_valid() — 判断是否合法 JSON
+• TRY_CAST() — 安全类型转换
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 一句话总结
+
+DuckDB 的 JSON 处理能力让你：不需要写 Python 解析逻辑，直接在 SQL 里完成一切。
+
+📌 收藏这条笔记，下次处理 JSON 数据时直接回来参考。
+
+───────────────────────
+© 2026 DuckDB 实战笔记 ｜ 每天进步一点点
