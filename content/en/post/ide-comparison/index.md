@@ -24,7 +24,7 @@ This comparison evaluates each IDE across features, performance, pricing, ecosys
 | **Startup Time** | ~2–5 sec | ~3–6 sec | ~0.5 sec | ~3–8 sec |
 | **AI Integration** | Extensions (Copilot, etc.) | Native (built-in) | Extensions (Zed AI) | AI Assistant (paid add-on) |
 | **Multi-language** | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited | ✅ Per-product |
-| **Plugin Ecosystem** | 187K+++++++ extensions | VS Code extensions | Growing (native + extensions) | 200+ official plugins |
+| **Plugin Ecosystem** | 188K++++++++ extensions | VS Code extensions | Growing (native + extensions) | 200+ official plugins |
 | **Remote Dev** | ✅ Remote SSH / Codespaces | ✅ Cursor Remote | ✅ Zed Cloud / SSH | ✅ Remote Development |
 | **Built-in Terminal** | ✅ | ✅ | ✅ | ✅ |
 | **Debugger** | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in |
@@ -198,4 +198,4 @@ There is no single "best" IDE — the right choice depends on your workflow, pro
 - [JetBrains IntelliJ IDEA](https://www.jetbrains.com/idea/)
 - [Stack Overflow Developer Survey 2026](https://survey.stackoverflow.co/2026/)
 
-*Last updated: July 27, 2026uly 20, 2026uly 13, 2026uly 06, 2026une 29, 2026une 22, 2026-06-18*
+*Last updated: August 03, 2026uly 27, 2026uly 20, 2026uly 13, 2026uly 06, 2026une 29, 2026une 22, 2026-06-18*
