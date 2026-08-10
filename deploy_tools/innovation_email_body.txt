@@ -1,0 +1,28 @@
+项目名：anydoc
+
+一句话说明：用 Rust 编写的超快文档转换库，可将 Word、PPT、Excel、PDF、EPUB、CSV 等格式转换为干净、LLM 友好的 Markdown，支持 Node.js、Python、WASM 绑定。
+
+角色价值分析：
+个人开发者：零成本接入，通过 npm/pip 一键安装，CLI 命令即可转换；可用于本地文档管理工具、笔记软件、AI 知识库项目；WASM 版本可在浏览器端运行，无需服务器。
+技术团队：可作为 AI Agent 的文档预处理层，替代传统 Tika/Unstructured；支持 MCP 协议，直接集成到 Claude Code、Cursor 等编码 Agent；开源 MIT 协议，可自由商业化修改。
+企业用户：替代商业文档 API 服务（如 Unstructured、Luna），自建文档处理管道；支持私有化部署，敏感文档不外传；可与现有 RAG 系统、知识库系统集成。
+
+变现方案：
+低门槛：开发一个浏览器端文档转换工具（利用 WASM），用户上传文档后转换为 Markdown 下载；做一个 Notion/Obsidian 插件，一键将 Word/PPT 导入为 Markdown；提供 API 封装服务（FastAPI + anydoc），按调用次数收费。
+中等投入：构建「文档到知识库」一站式 SaaS：上传文档 → 自动转 Markdown → 切分 → 向量化 → 存入向量数据库；为企业搭建私有文档处理系统，按部署收费（¥5,000-50,000/套）；提供「Agent 文档阅读」技能包，帮助 AI 开发者快速集成文档处理能力。
+高投入：与 Firecrawl 合作，提供企业级文档处理解决方案（OCR + 格式化 + 向量化）；打造「文档 AI」平台，支持多格式输入、智能排版、代码高亮、图表识别；构建文档智能分析引擎：自动提取合同条款、财务报表、技术文档要点。
+
+深度洞察：
+为什么这个项目值得做？
+文档处理是 AI Agent 的「基础设施层」：任何使用 LLM 处理文档的场景都需要。Firecrawl 已是知名爬虫公司，anydoc 是其生态延伸，有天然流量入口。3 天内 5,201 stars，说明市场需求旺盛。Rust 实现 = 高性能 + 跨平台，比 Python 方案快 10x+。当前主流方案（Unstructured、Tika）偏重、偏慢，anydoc 填补了「快速 + 轻量」的空白。
+
+市场机会在哪里？
+AI 编程 Agent 生态爆发：Cursor、Claude Code、Codex 都需要文档理解能力。企业知识管理升级：从「存文档」到「让 AI 读文档」。无代码/低代码趋势：很多非技术用户需要简单工具转换文档格式。中国市场需求：大量企业仍在使用 Word/PPT 做文档，数字化转型需求强烈。
+
+为什么现在做还来得及？
+anydoc 刚发布 3 天，生态尚未饱和。还没有成熟的「anydoc + Agent」集成方案。企业私有化部署需求正在增长，anydoc 支持自托管。中国开发者社区对文档处理工具需求旺盛。
+
+🔗 仓库：https://github.com/firecrawl/anydoc
+📄 创建时间：2026-08-03
+🌐 支持格式：docx, pptx, xlsx, odt, rtf, epub, csv, pdf
+🏢 出品方：Firecrawl（知名爬虫/API 公司）

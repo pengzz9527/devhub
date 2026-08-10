@@ -1,0 +1,304 @@
+🦆 DuckDB 实战：时间序列分析 — 用 SQL 做同比、环比、移动平均和窗口聚合
+
+你肯定遇到过这种需求：
+- "上个月销售额环比增长了多少？"
+- "今年每个季度的同比变化趋势"
+- "过去7天的移动平均值"
+- "每个用户最近一次下单是什么时候？"
+
+传统做法：用 pandas 写一堆 groupby + shift + rolling，代码又长又容易出错。
+
+用 DuckDB，一条 SQL 搞定所有时间序列操作。而且快得多。
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景一：同比 & 环比计算
+
+假设有一张销售表 sales(date, amount)，你要计算每个月相对于上月的环比增长，以及相对于去年同月的同比增长。
+
+```sql
+SELECT
+    date_trunc('month', sale_date) AS month,
+    SUM(amount) AS monthly_revenue,
+    -- 环比：与上月比较
+    LAG(SUM(amount)) OVER (ORDER BY date_trunc('month', sale_date)) AS prev_month_revenue,
+    ROUND(
+        100.0 * (SUM(amount) - LAG(SUM(amount)) OVER (ORDER BY date_trunc('month', sale_date)))
+        / NULLIF(LAG(SUM(amount)) OVER (ORDER BY date_trunc('month', sale_date)), 0),
+        2
+    ) AS mom_growth_pct,
+    -- 同比：与去年同月比较
+    LAG(SUM(amount), 12) OVER (ORDER BY date_trunc('month', sale_date)) AS same_month_last_year,
+    ROUND(
+        100.0 * (SUM(amount) - LAG(SUM(amount), 12) OVER (ORDER BY date_trunc('month', sale_date)))
+        / NULLIF(LAG(SUM(amount), 12) OVER (ORDER BY date_trunc('month', sale_date)), 0),
+        2
+    ) AS yoy_growth_pct
+FROM sales
+GROUP BY date_trunc('month', sale_date)
+ORDER BY month;
+```
+
+关键点：
+• `LAG(col, n)` — 取前面第 n 行的值。n=1 是上月，n=12 是去年同月
+• `NULLIF(..., 0)` — 防止除以零报错
+• `date_trunc('month', ...)` — 按月聚合，把日期截断到月初
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景二：移动平均线（MA）
+
+做技术分析的朋友最熟悉这个了。用 DuckDB 的窗口函数，几行代码就能算出 MA5、MA20、MA60。
+
+```sql
+SELECT
+    sale_date,
+    amount AS daily_revenue,
+    -- 5日移动平均
+    AVG(amount) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
+    ) AS ma5,
+    -- 20日移动平均
+    AVG(amount) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 19 PRECEDING AND CURRENT ROW
+    ) AS ma20,
+    -- 60日移动平均
+    AVG(amount) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 59 PRECEDING AND CURRENT ROW
+    ) AS ma60
+FROM sales
+ORDER BY sale_date;
+```
+
+核心语法：`ROWS BETWEEN n PRECEDING AND CURRENT ROW`
+这表示"当前行 + 前面 n 行"，正好是一个滑动窗口。
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景三：时间桶聚合（time_bucket）
+
+DuckDB v1.0+ 引入了 time_bucket 函数，可以按任意时间间隔聚合数据。非常适合做实时看板。
+
+```sql
+-- 每15分钟聚合一次（适合高频交易数据）
+SELECT
+    time_bucket(INTERVAL '15 minutes', timestamp) AS time_slot,
+    COUNT(*) AS trade_count,
+    AVG(price) AS avg_price,
+    MAX(price) - MIN(price) AS price_range,
+    SUM(volume) AS total_volume
+FROM trades
+WHERE timestamp >= TIMESTAMP '2026-07-01'
+GROUP BY time_bucket(INTERVAL '15 minutes', timestamp)
+ORDER BY time_slot;
+
+-- 每天聚合
+SELECT
+    time_bucket(INTERVAL '1 day', sale_date) AS day,
+    SUM(amount) AS daily_revenue,
+    COUNT(DISTINCT customer_id) AS active_customers
+FROM orders
+GROUP BY day
+ORDER BY day;
+```
+
+time_bucket 的优势：
+• 自动处理不规则的时间间隔
+• 比手动 date_trunc 更灵活，支持任意间隔（15分钟、30天、1季度等）
+• 输出结果是标准 timestamp，方便后续 JOIN
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景四：连续区间分析 — 用户留存
+
+这是互联网产品最核心的指标之一。用 DuckDB 算用户次日留存、7日留存、30日留存。
+
+```sql
+WITH first_login AS (
+    -- 每个用户的首次登录日期
+    SELECT
+        user_id,
+        MIN(login_date) AS first_date
+    FROM user_logins
+    GROUP BY user_id
+),
+login_after_first AS (
+    -- 用户在首次登录之后的每次登录
+    SELECT
+        f.user_id,
+        f.first_date,
+        l.login_date,
+        -- 距离首次登录的天数
+        DATEDIFF('day', f.first_date, l.login_date) AS days_since_first
+    FROM first_login f
+    JOIN user_logins l ON f.user_id = l.user_id
+    WHERE l.login_date > f.first_date
+)
+SELECT
+    days_since_first AS retention_day,
+    COUNT(DISTINCT user_id) AS retained_users,
+    ROUND(100.0 * COUNT(DISTINCT user_id) / (
+        SELECT COUNT(DISTINCT user_id) FROM first_login
+    ), 2) AS retention_rate_pct
+FROM login_after_first
+WHERE days_since_first BETWEEN 0 AND 30
+GROUP BY days_since_first
+ORDER BY retention_day;
+```
+
+输出示例：
+```
+retention_day | retained_users | retention_rate_pct
+--------------|----------------|--------------------
+0             | 5000           | 100.00
+1             | 3200           | 64.00
+7             | 1800           | 36.00
+30            | 850            | 17.00
+```
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景五：Gap & Island 问题 — 识别用户活跃期
+
+真实场景：你的 SaaS 客户有活跃期和沉寂期，你想自动识别每个客户的"活跃阶段"。
+
+```sql
+WITH login_flags AS (
+    SELECT
+        user_id,
+        login_date,
+        -- 标记是否连续登录
+        login_date - INTERVAL '1 day' * LAG(login_date) OVER (
+            PARTITION BY user_id ORDER BY login_date
+        ) AS days_from_prev
+    FROM user_logins
+),
+groups AS (
+    SELECT
+        user_id,
+        login_date,
+        -- 连续登录的日期会形成相同的分组
+        login_date - INTERVAL '1 day' * ROW_NUMBER() OVER (
+            PARTITION BY user_id ORDER BY login_date
+        ) AS grp
+    FROM login_flags
+    WHERE days_from_prev = INTERVAL '1 day' OR days_from_prev IS NULL
+)
+SELECT
+    user_id,
+    MIN(login_date) AS period_start,
+    MAX(login_date) AS period_end,
+    COUNT(*) AS consecutive_days
+FROM groups
+GROUP BY user_id, grp
+HAVING consecutive_days >= 3  -- 至少连续3天才算活跃期
+ORDER BY user_id, period_start;
+```
+
+这个模式叫"Gap & Island"，是数据分析中最经典的问题之一。核心思路：用 `日期 - 行号` 来标记连续区间，相同值的就是一组。
+
+━━━━━━━━━━━━━━━━━━━━
+
+🐍 Python 完整实战：从 CSV 到分析报告
+
+```python
+import duckdb
+import pandas as pd
+
+# 读取数据（可以是 CSV、Parquet、甚至直接读数据库）
+con = duckdb.connect()
+
+# 创建示例数据
+con.execute("""
+CREATE TABLE sales AS
+SELECT
+    DATE '2026-01-01' + (random() * 365)::INT AS sale_date,
+    (random() * 1000)::DECIMAL(10,2) AS amount,
+    ('北京','上海','广州','深圳','杭州')[1 + (random()*4)::INT] AS city,
+    ('电子产品','服装','食品','家居','图书')[1 + (random()*4)::INT] AS category
+FROM range(100000)
+""")
+
+# 一键生成月度销售报告
+report = con.execute("""
+WITH monthly AS (
+    SELECT
+        date_trunc('month', sale_date) AS month,
+        SUM(amount) AS revenue,
+        COUNT(*) AS order_count,
+        AVG(amount) AS avg_order_value
+    FROM sales
+    GROUP BY month
+)
+SELECT
+    month,
+    revenue,
+    order_count,
+    avg_order_value,
+    LAG(revenue) OVER w AS prev_month_revenue,
+    ROUND(100.0 * (revenue - LAG(revenue) OVER w) / NULLIF(LAG(revenue) OVER w, 0), 2) AS mom_growth,
+    ROUND(AVG(revenue) OVER (
+        ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ), 2) AS ma3_revenue
+FROM monthly
+WINDOW w AS (ORDER BY month)
+ORDER BY month
+""").fetchdf()
+
+print(report.to_string(index=False))
+```
+
+━━━━━━━━━━━━━━━━━━━━
+
+📋 时间序列函数速查
+
+• LAG(col, n) — 取前 n 行的值，用于环比/同比
+• LEAD(col, n) — 取后 n 行的值
+• ROW_NUMBER() — 行号，配合日期可识别连续区间
+• RANK() / DENSE_RANK() — 排名，处理并列情况
+• NTILE(n) — 将数据分成 n 个桶（如四分位数）
+• FIRST_VALUE(col) — 取每组第一个值
+• LAST_VALUE(col) — 取每组最后一个值
+• SUM() OVER (ROWS BETWEEN ...) — 滚动求和
+• AVG() OVER (ROWS BETWEEN ...) — 移动平均
+• time_bucket(interval, ts) — 按时间间隔聚合
+• date_trunc('month', ts) — 日期截断到指定精度
+• DATEDIFF('day', d1, d2) — 计算两个日期之间的天数差
+
+━━━━━━━━━━━━━━━━━━━━
+
+💡 一个容易被忽略的技巧：WINDOW 子句复用
+
+当你在同一个查询中多次用到相同的窗口定义时，用 WINDOW 子句避免重复：
+
+```sql
+SELECT
+    month,
+    revenue,
+    LAG(revenue) OVER w AS prev_month,
+    AVG(revenue) OVER w AS ma3,
+    SUM(revenue) OVER w AS cumulative
+FROM monthly_sales
+WINDOW w AS (ORDER BY month);
+```
+
+这样只需要写一次窗口定义，查询更简洁、性能也更好（优化器会复用计算）。
+
+━━━━━━━━━━━━━━━━━━━━
+
+🎯 总结
+
+时间序列分析是数据分析师的"基本盘"——无论是电商的 GMV 分析、金融的 K 线计算、还是 SaaS 的留存分析，都离不开它。
+
+DuckDB 的核心优势在于：
+• **窗口函数强大** — LAG/LEAD/ROLLUP 覆盖几乎所有时间序列场景
+• **time_bucket 灵活** — 任意时间间隔聚合，比 date_trunc 更实用
+• **Gap & Island 解法优雅** — 几行 SQL 解决复杂连续区间问题
+• **Python 无缝集成** — fetchdf() 一行代码转 Pandas DataFrame
+
+掌握这些技巧，你处理任何时间序列报表的需求都能从容应对。
+
+💡 更多 DuckDB 时间序列实战案例 → duckdblab.org

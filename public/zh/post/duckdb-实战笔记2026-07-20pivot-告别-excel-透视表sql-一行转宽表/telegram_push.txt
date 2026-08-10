@@ -1,0 +1,153 @@
+🦆 DuckDB 实战：PIVOT — 告别 Excel 透视表，SQL 一行转宽表
+
+你肯定遇到过这种需求：
+- "把每个月的销售额做成一张宽表，左边是销售员，上面是月份"
+- "按品类统计每个城市的销售分布"
+- "把长表转成报表格式，方便发给老板"
+
+传统做法：导出 CSV → 打开 Excel → 插入透视表 → 拖拽字段 → 调格式。一套流程下来，少则十分钟。
+
+用 DuckDB，一条 SQL 搞定。而且数据量再大也不怕。
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景一：基础 PIVOT — 长表转宽表
+
+假设你有一张销售记录表 sales(name, quarter, amount)，要按季度透视：
+
+```sql
+CREATE TABLE sales AS
+SELECT * FROM (VALUES
+    ('Alice', 'Q1', 100),
+    ('Alice', 'Q2', 150),
+    ('Alice', 'Q3', 200),
+    ('Bob',   'Q1', 80),
+    ('Bob',   'Q2', 120),
+    ('Bob',   'Q3', 90)
+) AS t(name, quarter, amount);
+
+PIVOT sales ON quarter USING SUM(amount);
+```
+
+结果：
+```
+┌─────────┬────────┬────────┬────────┐
+│  name   │   Q1   │   Q2   │   Q3   │
+├─────────┼────────┼────────┼────────┤
+│ Alice   │    100 │    150 │    200 │
+│ Bob     │     80 │    120 │     90 │
+└─────────┴────────┴────────┴────────┘
+```
+
+核心语法：`PIVOT 表名 ON 行转列的字段 USING 聚合函数`
+
+⚠️ 注意：DuckDB 的 PIVOT 是独立语句，不是 SELECT 的子句。直接写 `PIVOT sales ON ...`，不要包在 SELECT 外面。
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景二：多聚合函数同时计算
+
+一次算 SUM、AVG、COUNT，不用写三遍：
+
+```sql
+PIVOT sales ON quarter USING SUM(amount), AVG(amount), COUNT(*);
+```
+
+结果列会自动带上聚合函数前缀：
+`Q1_sum(amount)` | `Q1_avg(amount)` | `Q1_count_star()`
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景三：自定义列别名
+
+PIVOT 的列名默认是 "Q1_SUM(amount)" 这种格式。想要更友好的名字？加别名：
+
+```sql
+PIVOT sales ON quarter USING SUM(amount) AS total;
+```
+
+结果列变成：`Q1_total` | `Q2_total` | `Q3_total`
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景四：过滤后再 PIVOT
+
+只想统计金额大于 90 的记录？用 CTE 先过滤：
+
+```sql
+WITH filtered AS (
+    SELECT * FROM sales WHERE amount > 90
+)
+PIVOT filtered ON quarter USING SUM(amount);
+```
+
+结果：
+```
+┌─────────┬────────┬────────┬────────┐
+│  name   │   Q1   │   Q2   │   Q3   │
+├─────────┼────────┼────────┼────────┤
+│ Alice   │    100 │    150 │    200 │
+│ Bob     │   NULL │    120 │   NULL │
+└─────────┴────────┴────────┴────────┘
+```
+
+不满足条件的单元格显示为 NULL。如果需要补 0，外层套个 COALESCE：
+
+```sql
+WITH pivoted AS (
+    WITH filtered AS (SELECT * FROM sales WHERE amount > 90)
+    PIVOT filtered ON quarter USING SUM(amount)
+)
+SELECT name, COALESCE("Q1", 0) AS q1, COALESCE("Q2", 0) AS q2, COALESCE("Q3", 0) AS q3
+FROM pivoted;
+```
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 场景五：UNPIVOT — 反向操作（宽表转长表）
+
+宽表转长表同样可以：
+
+```sql
+CREATE TABLE monthly_sales(name TEXT, jan INT, feb INT, mar INT);
+INSERT INTO monthly_sales VALUES
+    ('Alice', 100, 150, 200),
+    ('Bob', 80, 120, 90);
+
+-- UNION ALL 方式（最通用）
+SELECT name, 'jan' AS month, jan AS value FROM monthly_sales
+UNION ALL
+SELECT name, 'feb', feb FROM monthly_sales
+UNION ALL
+SELECT name, 'mar', mar FROM monthly_sales
+ORDER BY name, month;
+
+
+```
+
+━━━━━━━━━━━━━━━━━━━━
+
+🧠 PIVOT 语法速记
+
+```sql
+PIVOT 表名 ON 行转列的字段 USING 聚合函数1, 聚合函数2, ...;
+```
+
+关键点：
+• ON 后面的字段会变成新的列头
+• USING 后面跟聚合函数，决定每个单元格的值
+• 除了 PIVOT 的列之外，其他列会自动作为分组键
+• 自动检测所有唯一值并生成列，无需硬编码
+• PIVOT 是独立语句，不要包在 SELECT 里
+
+━━━━━━━━━━━━━━━━━━━━
+
+📝 PIVOT vs 传统方案
+
+• PIVOT vs Excel 透视表：SQL 自动化，可嵌入管道，数据量大时快得多
+• PIVOT vs CASE WHEN + GROUP BY：PIVOT 自动检测动态列，CASE WHEN 需要预设所有列名
+• PIVOT vs pandas.pivot_table：DuckDB 在 SQL 层完成，不需要拉 Python 里处理
+
+掌握这个技巧，以后做报表再也不用手动拖 Excel 透视表了。
+
+💡 更多 DuckDB 实战技巧 → duckdblab.org

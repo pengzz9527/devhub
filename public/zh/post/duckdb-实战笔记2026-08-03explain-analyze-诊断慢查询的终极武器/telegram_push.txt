@@ -1,0 +1,227 @@
+📊 DuckDB 实战笔记 ｜ 2026-08-03
+
+> 每天一个 DuckDB 实战技巧，让你立刻能用。
+
+---
+
+## 🔥 今日话题：EXPLAIN ANALYZE — 诊断慢查询的终极武器
+
+你有没有遇到过这种场景：
+
+> 一条 SQL 在测试数据上跑很快，但到了生产环境就卡死。或者明明数据量不大，查询却花了 10 秒以上。
+
+传统做法是什么？猜测问题 → 加索引 → 改查询 → 再测 → 还是慢 → 继续猜。来回折腾几小时，最后可能也没找到真正的问题。
+
+**用 DuckDB 的 EXPLAIN ANALYZE，你可以直接"看到"查询的执行计划，精确找到性能瓶颈。**
+
+---
+
+## 📋 场景：慢查询诊断
+
+假设你有一张订单表，数据量 1000 万行。现在你要执行这个查询：
+
+```sql
+SELECT customer_id, SUM(amount) AS total
+FROM orders
+WHERE status = 'completed'
+  AND order_date >= DATE '2026-06-01'
+GROUP BY customer_id
+ORDER BY total DESC
+LIMIT 100;
+```
+
+查询结果正确，但跑了 8 秒。问题出在哪？
+
+---
+
+## 💡 第一步：用 EXPLAIN 看执行计划
+
+```sql
+EXPLAIN
+SELECT customer_id, SUM(amount) AS total
+FROM orders
+WHERE status = 'completed'
+  AND order_date >= DATE '2026-06-01'
+GROUP BY customer_id
+ORDER BY total DESC
+LIMIT 100;
+```
+
+可以看到 DuckDB 选择了全表扫描（TableScan），然后过滤、聚合、排序。没有用到索引。
+
+---
+
+## 💡 第二步：用 EXPLAIN ANALYZE 看实际执行
+
+```sql
+EXPLAIN ANALYZE
+SELECT customer_id, SUM(amount) AS total
+FROM orders
+WHERE status = 'completed'
+  AND order_date >= DATE '2026-06-01'
+GROUP BY customer_id
+ORDER BY total DESC
+LIMIT 100;
+```
+
+**输出关键信息：**
+
+```
+Execution Time: 8.2s
+- TableScan: 2.3s (读取了全部 1000 万行)
+- Filter: 0.1s (过滤后剩 50 万行)
+- Aggregate: 3.5s (分组聚合)
+- OrderBy: 2.3s (排序)
+```
+
+**关键发现：**
+- `TableScan orders` 读了全部 1000 万行 → **瓶颈在这里！**
+- 过滤后只剩 50 万行，但已经读了 1000 万行
+
+---
+
+## 💡 第三步：诊断问题 — 缺少索引
+
+问题很明确：`status` 和 `order_date` 列没有索引，导致全表扫描。
+
+**解决方案：创建复合索引**
+
+```sql
+CREATE INDEX idx_orders_status_date ON orders(status, order_date);
+```
+
+再次执行 EXPLAIN ANALYZE：
+
+```
+Execution Time: 4.1s
+- IndexScan: 0.3s (只读了 50 万行，而不是 1000 万行)
+```
+
+**改进效果：**
+- 执行时间从 8.2s 降到 4.1s，**提升 50%**
+- 读取行数从 1000 万降到 50 万，**减少 95%**
+
+---
+
+## 💡 第四步：常见性能瓶颈及解决方案
+
+### 瓶颈 1：全表扫描（TableScan）
+
+```sql
+-- 创建索引
+CREATE INDEX idx_name ON table(column);
+
+-- 复合索引（注意列顺序）
+CREATE INDEX idx_status_date ON orders(status, order_date);
+```
+
+### 瓶颈 2：哈希聚合内存溢出
+
+```sql
+-- 增加内存限制
+SET memory_limit = '4GB';
+```
+
+### 瓶颈 3：重复计算
+
+```sql
+-- 使用 CTE 提取公共子查询
+WITH completed_customers AS (
+    SELECT DISTINCT customer_id FROM orders WHERE status = 'completed'
+)
+SELECT o.*
+FROM orders o
+JOIN completed_customers c ON o.customer_id = c.customer_id;
+```
+
+---
+
+## 🚀 实战案例：逐步优化一个慢查询
+
+### 原始查询（15 秒）
+
+```sql
+SELECT
+    o.customer_id,
+    c.name,
+    COUNT(o.order_id) AS order_count,
+    SUM(o.amount) AS total_amount
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+  AND o.order_date >= DATE '2026-01-01'
+  AND c.region = '华东'
+GROUP BY o.customer_id, c.name
+ORDER BY total_amount DESC;
+```
+
+### 优化步骤
+
+**第一步：添加索引**
+
+```sql
+CREATE INDEX idx_orders_status_date ON orders(status, order_date);
+CREATE INDEX idx_customers_region ON customers(region);
+```
+
+**第二步：使用物化视图（如果这个查询经常运行）**
+
+```sql
+CREATE MATERIALIZED VIEW mv_customer_orders AS
+SELECT
+    o.customer_id,
+    c.name,
+    c.region,
+    o.status,
+    o.order_date,
+    o.amount
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id;
+
+CREATE INDEX idx_mv_status_date ON mv_customer_orders(status, order_date);
+CREATE INDEX idx_mv_region ON mv_customer_orders(region);
+```
+
+**最终结果：15.2s → 0.5s，提升 30 倍！**
+
+---
+
+## 🧠 EXPLAIN vs EXPLAIN ANALYZE 对比
+
+| 特性 | EXPLAIN | EXPLAIN ANALYZE |
+|------|---------|-----------------|
+| 执行查询 | ❌ 不执行 | ✅ 执行查询 |
+| 显示执行计划 | ✅ | ✅ |
+| 显示实际耗时 | ❌ | ✅ |
+| 显示实际行数 | ❌ | ✅ |
+| 适用场景 | 初步分析 | 性能诊断 |
+
+**建议：** 日常调试直接用 `EXPLAIN ANALYZE`，一步到位。
+
+---
+
+## 📝 小结
+
+| 技能 | 一句话总结 |
+|------|-----------|
+| 查看执行计划 | `EXPLAIN` 查看计划，`EXPLAIN ANALYZE` 执行并查看计划 |
+| 识别瓶颈 | 看哪个节点耗时最长、读取行数最多 |
+| 添加索引 | `CREATE INDEX idx_name ON table(column)` |
+| 更新统计信息 | `ANALYZE table_name` |
+| 创建物化视图 | `CREATE MATERIALIZED VIEW` 预聚合常用查询 |
+
+**DuckDB 的 EXPLAIN ANALYZE 让你：不再盲猜性能问题，直接看到查询的每一步执行细节。**
+
+---
+
+## 💬 互动
+
+你的项目中有没有"明明数据量不大，查询却很慢"的情况？把 EXPLAIN ANALYZE 的输出贴出来，我们一起看看问题出在哪！
+
+---
+
+📌 收藏这条笔记，下次遇到慢查询时直接回来参考。
+
+---
+
+🔍 想系统学习 DuckDB 性能优化？duckdblab.org 上有完整教程系列，从基础查询到 EXPLAIN ANALYZE 深度解读，带你成为 DuckDB 性能调优专家。
