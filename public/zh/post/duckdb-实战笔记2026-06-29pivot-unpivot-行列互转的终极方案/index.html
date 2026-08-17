@@ -1,137 +1,745 @@
-<!doctype html><html lang=zh-CN dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。"><title>📊 DuckDB 实战笔记｜2026-06-29：PIVOT & UNPIVOT — 行列互转的终极方案</title><link rel=canonical href=https://devhub.vercel.app/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=preload as=style href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap"><link rel=stylesheet href=/scss/style.min.13ff893da039959c0973f4d0196edb0a0ac2dc140d0bf2bbc65559cf150123a4.css><meta property='og:title' content="📊 DuckDB 实战笔记｜2026-06-29：PIVOT & UNPIVOT — 行列互转的终极方案"><meta property='og:description' content="每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。"><meta property='og:url' content='https://devhub.vercel.app/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/'><meta property='og:site_name' content='开发者工具对比'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='DuckDB'><meta property='article:tag' content='PIVOT'><meta property='article:tag' content='UNPIVOT'><meta property='article:tag' content='行列转换'><meta property='article:tag' content='SQL'><meta property='article:tag' content='实战'><meta property='article:published_time' content='2026-06-29T00:00:00+00:00'><meta property='article:modified_time' content='2026-06-29T00:00:00+00:00'><meta name=twitter:title content="📊 DuckDB 实战笔记｜2026-06-29：PIVOT & UNPIVOT — 行列互转的终极方案"><meta name=twitter:description content="每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。"></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label=切换菜单>
-<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><div class=site-meta><h1 class=site-name><a href=/zh/>开发者工具对比</a></h1><h2 class=site-description>找到最适合你的开发工具</h2></div></header><ol class=menu id=main-menu><li><a href=/zh/><span>首页</span></a></li><li><a href=/zh/post/><span>对比评测</span></a></li><li><a href=/zh/categories/><span>分类</span></a></li><li><a href=/zh/tags/><span>标签</span></a></li><li><a href=/zh/search/><span>搜索</span></a></li><li><a href=/zh/about/><span>关于</span></a></li><li class=menu-bottom-section><ol class=menu><li id=i18n-switch><svg class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c-.003 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
-<select name=language title=language onchange="window.location.href=this.selectedOptions[0].value"><option value=/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/ selected>中文</option><option value=/en/>English</option></select></li><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
-<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
-<span>暗色模式</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/zh/categories/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B0/ style=background-color:#bee8ef;color:#0f373d>DuckDB 实战笔记</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/>📊 DuckDB 实战笔记｜2026-06-29：PIVOT & UNPIVOT — 行列互转的终极方案</a></h2><h3 class=article-subtitle>每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。</h3></div><footer class=article-meta><div class=inline-meta><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
-<time class=article-time--published datetime=2026-06-29T00:00:00Z>2026年6月29日星期一</time>
-<svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
-<time class=article-time--reading>阅读时长: 4 分钟</time></div></footer></div></header><section class=article-content><h1 id=-duckdb-实战笔记--2026-06-29>📊 DuckDB 实战笔记 ｜ 2026-06-29</h1><blockquote><p><strong>每天一个 DuckDB 实战技巧，让你立刻能用。</strong></p></blockquote><hr><h2 id=-今日话题pivot--unpivot--行列互转不再头疼>🔥 今日话题：PIVOT & UNPIVOT — 行列互转不再头疼</h2><p>做报表的人一定遇到过这个经典难题：</p><blockquote><p>&ldquo;我需要一张表，横着是客户，竖着是产品，格子是销售额。&rdquo;</p></blockquote><p>或者反过来：</p><blockquote><p>&ldquo;数据库给的是宽表，我需要拆成长表才能做透视分析。&rdquo;</p></blockquote><p>以前怎么做？一堆 <code>CASE WHEN</code> 拼来拼去，或者拉到 Python 里用 <code>pivot()</code> / <code>melt()</code> 折腾。</p><p><strong>今天教你用 DuckDB 的 PIVOT 和 UNPIVOT，一行 SQL 搞定行列互转。</strong></p><hr><h2 id=-场景电商销售数据>📋 场景：电商销售数据</h2><p>假设你有一张订单表，每条记录是"客户买了什么产品花了多少钱"：</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>orders</span><span class=p>(</span><span class=n>customer</span><span class=w> </span><span class=nb>VARCHAR</span><span class=p>,</span><span class=w> </span><span class=n>product</span><span class=w> </span><span class=nb>VARCHAR</span><span class=p>,</span><span class=w> </span><span class=n>amount</span><span class=w> </span><span class=n>DOUBLE</span><span class=p>);</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=k>INSERT</span><span class=w> </span><span class=k>INTO</span><span class=w> </span><span class=n>orders</span><span class=w> </span><span class=k>VALUES</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Alice&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Apple&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>10</span><span class=p>.</span><span class=mi>5</span><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Alice&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Banana&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>5</span><span class=p>.</span><span class=mi>0</span><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Bob&#39;</span><span class=p>,</span><span class=w>   </span><span class=s1>&#39;Apple&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>8</span><span class=p>.</span><span class=mi>0</span><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Bob&#39;</span><span class=p>,</span><span class=w>   </span><span class=s1>&#39;Cherry&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>12</span><span class=p>.</span><span class=mi>0</span><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Carol&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Banana&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>6</span><span class=p>.</span><span class=mi>5</span><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Carol&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Cherry&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>15</span><span class=p>.</span><span class=mi>0</span><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;Carol&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Apple&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>9</span><span class=p>.</span><span class=mi>0</span><span class=p>);</span><span class=w>
-</span></span></span></code></pre></div><p>现在老板要一份<strong>按客户汇总各产品销售额</strong>的报表——也就是要把 <code>product</code> 列变成横向的列名。</p><hr><h2 id=-pivot长表--宽表>💡 PIVOT：长表 → 宽表</h2><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SELECT</span><span class=w> </span><span class=n>customer</span><span class=p>,</span><span class=w> </span><span class=n>product</span><span class=p>,</span><span class=w> </span><span class=n>amount</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>orders</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w> </span><span class=n>PIVOT</span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SUM</span><span class=p>(</span><span class=n>amount</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>FOR</span><span class=w> </span><span class=n>product</span><span class=w> </span><span class=k>IN</span><span class=w> </span><span class=p>(</span><span class=s1>&#39;Apple&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Banana&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Cherry&#39;</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>customer</span><span class=p>;</span><span class=w>
-</span></span></span></code></pre></div><p><strong>结果：</strong></p><div class=table-wrapper><table><thead><tr><th>customer</th><th>Apple</th><th>Banana</th><th>Cherry</th></tr></thead><tbody><tr><td>Alice</td><td>10.5</td><td>5.0</td><td>NULL</td></tr><tr><td>Bob</td><td>8.0</td><td>NULL</td><td>12.0</td></tr><tr><td>Carol</td><td>9.0</td><td>6.5</td><td>15.0</td></tr></tbody></table></div><p><strong>就这么简单。</strong> 不需要 <code>CASE WHEN</code>，不需要 <code>GROUP BY</code> 套子查询。</p><h3 id=pivot-语法拆解>PIVOT 语法拆解</h3><pre tabindex=0><code>PIVOT(
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。">
+<title>📊 DuckDB 实战笔记｜2026-06-29：PIVOT &amp; UNPIVOT — 行列互转的终极方案</title>
+
+
+<link rel="canonical" href="https://devhub.vercel.app/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+
+
+<link rel="stylesheet" href="/scss/style.min.13ff893da039959c0973f4d0196edb0a0ac2dc140d0bf2bbc65559cf150123a4.css"><meta property='og:title' content="📊 DuckDB 实战笔记｜2026-06-29：PIVOT & UNPIVOT — 行列互转的终极方案">
+<meta property='og:description' content="每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。">
+<meta property='og:url' content='https://devhub.vercel.app/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/'>
+<meta property='og:site_name' content='开发者工具对比'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='DuckDB' /><meta property='article:tag' content='PIVOT' /><meta property='article:tag' content='UNPIVOT' /><meta property='article:tag' content='行列转换' /><meta property='article:tag' content='SQL' /><meta property='article:tag' content='实战' /><meta property='article:published_time' content='2026-06-29T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2026-06-29T00:00:00&#43;00:00'/>
+<meta name="twitter:title" content="📊 DuckDB 实战笔记｜2026-06-29：PIVOT & UNPIVOT — 行列互转的终极方案">
+<meta name="twitter:description" content="每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。">
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/zh/">开发者工具对比</a></h1>
+            <h2 class="site-description">找到最适合你的开发工具</h2>
+        </div>
+    </header><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/zh/' >
+                
+                <span>首页</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/post/' >
+                
+                <span>对比评测</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/categories/' >
+                
+                <span>分类</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/tags/' >
+                
+                <span>标签</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/search/' >
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+        
+        <li >
+            <a href='/zh/about/' >
+                
+                <span>关于</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+                    <li id="i18n-switch">  
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-language" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M4 5h7" />
+  <path d="M9 3v2c0 4.418 -2.239 8 -5 8" />
+  <path d="M5 9c-.003 2.144 2.952 3.908 6.7 4" />
+  <path d="M12 20l4 -9l4 9" />
+  <path d="M19.1 18h-6.2" />
+</svg>
+
+
+
+                        <select name="language" title="language" onchange="window.location.href = this.selectedOptions[0].value">
+                            
+                                
+                                
+                                    
+                                        
+                                    
+                                
+                                <option value="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/" selected>中文</option>
+                            
+                                
+                                
+                                    
+                                
+                                <option value="/en/" >English</option>
+                            
+                        </select>
+                    </li>
+                
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>暗色模式</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+            
+        
+            
+                
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            
+            
+            
+            <a href="/zh/categories/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B0/" style="background-color: hsl(188, 60%, 84%); color: hsl(188, 60%, 15%);">
+                DuckDB 实战笔记
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-29pivot-unpivot-%E8%A1%8C%E5%88%97%E4%BA%92%E8%BD%AC%E7%9A%84%E7%BB%88%E6%9E%81%E6%96%B9%E6%A1%88/">📊 DuckDB 实战笔记｜2026-06-29：PIVOT &amp; UNPIVOT — 行列互转的终极方案</a>
+        </h2>
+    
+        
+        <h3 class="article-subtitle">
+            每天一个 DuckDB 实战技巧。今天教你用 PIVOT 和 UNPIVOT 轻松实现行列互转，告别繁琐的 CASE WHEN 和 Python 循环。
+        </h3>
+        
+    </div>
+
+    
+    
+    
+    
+    
+    
+    
+    <footer class="article-meta">
+        
+            <div class="inline-meta">
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                    <time class="article-time--published" datetime='2026-06-29T00:00:00Z'>2026年6月29日星期一</time>
+                
+
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                    <time class="article-time--reading">
+                        阅读时长: 4 分钟
+                    </time>
+                
+            </div>
+        
+
+        
+
+        
+    </footer>
+    
+</div>
+
+</header>
+
+    
+
+    <section class="article-content">
+    
+    
+    <h1 id="-duckdb-实战笔记--2026-06-29">📊 DuckDB 实战笔记 ｜ 2026-06-29
+</h1>
+    <blockquote>
+        <p><strong>每天一个 DuckDB 实战技巧，让你立刻能用。</strong></p>
+
+    </blockquote>
+<hr>
+<h2 id="-今日话题pivot--unpivot--行列互转不再头疼">🔥 今日话题：PIVOT &amp; UNPIVOT — 行列互转不再头疼
+</h2><p>做报表的人一定遇到过这个经典难题：</p>
+
+    <blockquote>
+        <p>&ldquo;我需要一张表，横着是客户，竖着是产品，格子是销售额。&rdquo;</p>
+
+    </blockquote>
+<p>或者反过来：</p>
+
+    <blockquote>
+        <p>&ldquo;数据库给的是宽表，我需要拆成长表才能做透视分析。&rdquo;</p>
+
+    </blockquote>
+<p>以前怎么做？一堆 <code>CASE WHEN</code> 拼来拼去，或者拉到 Python 里用 <code>pivot()</code> / <code>melt()</code> 折腾。</p>
+<p><strong>今天教你用 DuckDB 的 PIVOT 和 UNPIVOT，一行 SQL 搞定行列互转。</strong></p>
+<hr>
+<h2 id="-场景电商销售数据">📋 场景：电商销售数据
+</h2><p>假设你有一张订单表，每条记录是&quot;客户买了什么产品花了多少钱&quot;：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">customer</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="n">DOUBLE</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">VALUES</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">.</span><span class="mi">5</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">.</span><span class="mi">0</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Bob&#39;</span><span class="p">,</span><span class="w">   </span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">.</span><span class="mi">0</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Bob&#39;</span><span class="p">,</span><span class="w">   </span><span class="s1">&#39;Cherry&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">.</span><span class="mi">0</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Carol&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">.</span><span class="mi">5</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Carol&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Cherry&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">.</span><span class="mi">0</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;Carol&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></div><p>现在老板要一份<strong>按客户汇总各产品销售额</strong>的报表——也就是要把 <code>product</code> 列变成横向的列名。</p>
+<hr>
+<h2 id="-pivot长表--宽表">💡 PIVOT：长表 → 宽表
+</h2><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">customer</span><span class="p">,</span><span class="w"> </span><span class="n">product</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w"> </span><span class="n">PIVOT</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">FOR</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Cherry&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>结果：</strong></p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>customer</th>
+          <th>Apple</th>
+          <th>Banana</th>
+          <th>Cherry</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Alice</td>
+          <td>10.5</td>
+          <td>5.0</td>
+          <td>NULL</td>
+      </tr>
+      <tr>
+          <td>Bob</td>
+          <td>8.0</td>
+          <td>NULL</td>
+          <td>12.0</td>
+      </tr>
+      <tr>
+          <td>Carol</td>
+          <td>9.0</td>
+          <td>6.5</td>
+          <td>15.0</td>
+      </tr>
+  </tbody>
+</table></div>
+<p><strong>就这么简单。</strong> 不需要 <code>CASE WHEN</code>，不需要 <code>GROUP BY</code> 套子查询。</p>
+<h3 id="pivot-语法拆解">PIVOT 语法拆解
+</h3><pre tabindex="0"><code>PIVOT(
   聚合函数          ← 怎么合并重复行？SUM / COUNT / AVG / MAX...
   FOR 列名           ← 哪一列的值要变成列头？
   IN (具体值列表)    ← 这些值各自成为一列
 )
-</code></pre><p>几个关键点：</p><ul><li><strong>聚合函数</strong>决定了同一行多个值怎么合并。<code>SUM</code> 求和、<code>COUNT</code> 计数、<code>AVG</code> 平均，随你选。</li><li><strong>IN 列表</strong>里的值就是最终的列名。如果数据里有列表之外的值，会被忽略（如果想保留，可以用 <code>USING MAP</code> 模式）。</li><li><strong>没有匹配数据的格子</strong>自动填 NULL。</li></ul><h3 id=进阶不用写死列名>进阶：不用写死列名</h3><p>如果产品种类太多，手写 <code>IN (...)</code> 很痛苦。DuckDB 支持动态列：</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=c1>-- 用子查询动态获取所有产品
-</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SELECT</span><span class=w> </span><span class=n>customer</span><span class=p>,</span><span class=w> </span><span class=n>product</span><span class=p>,</span><span class=w> </span><span class=n>amount</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>orders</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w> </span><span class=n>PIVOT</span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SUM</span><span class=p>(</span><span class=n>amount</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>FOR</span><span class=w> </span><span class=n>product</span><span class=w> </span><span class=k>IN</span><span class=w> </span><span class=p>(</span><span class=k>SELECT</span><span class=w> </span><span class=k>DISTINCT</span><span class=w> </span><span class=n>product</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>orders</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>customer</span><span class=p>;</span><span class=w>
-</span></span></span></code></pre></div><p>这样不管新增多少产品，SQL 都不用改。</p><h3 id=进阶用-map-模式保留所有列>进阶：用 MAP 模式保留所有列</h3><p>当 <code>IN</code> 列表无法穷举所有值时，可以用 MAP 把所有未指定的列打包成一个 JSON：</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SELECT</span><span class=w> </span><span class=n>customer</span><span class=p>,</span><span class=w> </span><span class=n>product</span><span class=p>,</span><span class=w> </span><span class=n>amount</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>orders</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w> </span><span class=n>PIVOT</span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SUM</span><span class=p>(</span><span class=n>amount</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>FOR</span><span class=w> </span><span class=n>product</span><span class=w> </span><span class=k>IN</span><span class=w> </span><span class=p>(</span><span class=s1>&#39;Apple&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Banana&#39;</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>USING</span><span class=w> </span><span class=k>MAP</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>customer</span><span class=p>;</span><span class=w>
-</span></span></span></code></pre></div><p>结果会多出一列 <code>_other</code>，包含 <code>{'Cherry': 12.0}</code> 这样的映射。</p><hr><h2 id=-unpivot宽表--长表>💡 UNPIVOT：宽表 → 长表</h2><p>反过来也很常见。比如有张月度报表：</p><div class=table-wrapper><table><thead><tr><th>month</th><th>jan</th><th>feb</th><th>mar</th><th>apr</th></tr></thead><tbody><tr><td>sales</td><td>100</td><td>150</td><td>120</td><td>200</td></tr></tbody></table></div><p>你需要把它变成每行一个月的长表，方便后续分析。</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>monthly_sales</span><span class=p>(</span><span class=k>month</span><span class=w> </span><span class=nb>VARCHAR</span><span class=p>,</span><span class=w> </span><span class=n>jan</span><span class=w> </span><span class=n>DOUBLE</span><span class=p>,</span><span class=w> </span><span class=n>feb</span><span class=w> </span><span class=n>DOUBLE</span><span class=p>,</span><span class=w> </span><span class=n>mar</span><span class=w> </span><span class=n>DOUBLE</span><span class=p>,</span><span class=w> </span><span class=n>apr</span><span class=w> </span><span class=n>DOUBLE</span><span class=p>);</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=k>INSERT</span><span class=w> </span><span class=k>INTO</span><span class=w> </span><span class=n>monthly_sales</span><span class=w> </span><span class=k>VALUES</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>(</span><span class=s1>&#39;sales&#39;</span><span class=p>,</span><span class=w> </span><span class=mi>100</span><span class=p>,</span><span class=w> </span><span class=mi>150</span><span class=p>,</span><span class=w> </span><span class=mi>120</span><span class=p>,</span><span class=w> </span><span class=mi>200</span><span class=p>);</span><span class=w>
-</span></span></span></code></pre></div><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>monthly_sales</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=n>UNPIVOT</span><span class=p>(</span><span class=n>amount</span><span class=w> </span><span class=k>FOR</span><span class=w> </span><span class=k>month</span><span class=w> </span><span class=k>IN</span><span class=w> </span><span class=p>(</span><span class=n>jan</span><span class=p>,</span><span class=w> </span><span class=n>feb</span><span class=p>,</span><span class=w> </span><span class=n>mar</span><span class=p>,</span><span class=w> </span><span class=n>apr</span><span class=p>));</span><span class=w>
-</span></span></span></code></pre></div><p><strong>结果：</strong></p><div class=table-wrapper><table><thead><tr><th>month</th><th>jan</th><th>amount</th></tr></thead><tbody><tr><td>sales</td><td>jan</td><td>100</td></tr><tr><td>sales</td><td>feb</td><td>150</td></tr><tr><td>sales</td><td>mar</td><td>120</td></tr><tr><td>sales</td><td>apr</td><td>200</td></tr></tbody></table></div><h3 id=unpivot-语法拆解>UNPIVOT 语法拆解</h3><pre tabindex=0><code>UNPIVOT(
+</code></pre><p>几个关键点：</p>
+<ul>
+<li><strong>聚合函数</strong>决定了同一行多个值怎么合并。<code>SUM</code> 求和、<code>COUNT</code> 计数、<code>AVG</code> 平均，随你选。</li>
+<li><strong>IN 列表</strong>里的值就是最终的列名。如果数据里有列表之外的值，会被忽略（如果想保留，可以用 <code>USING MAP</code> 模式）。</li>
+<li><strong>没有匹配数据的格子</strong>自动填 NULL。</li>
+</ul>
+<h3 id="进阶不用写死列名">进阶：不用写死列名
+</h3><p>如果产品种类太多，手写 <code>IN (...)</code> 很痛苦。DuckDB 支持动态列：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="c1">-- 用子查询动态获取所有产品
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">customer</span><span class="p">,</span><span class="w"> </span><span class="n">product</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w"> </span><span class="n">PIVOT</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">FOR</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p>这样不管新增多少产品，SQL 都不用改。</p>
+<h3 id="进阶用-map-模式保留所有列">进阶：用 MAP 模式保留所有列
+</h3><p>当 <code>IN</code> 列表无法穷举所有值时，可以用 MAP 把所有未指定的列打包成一个 JSON：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">customer</span><span class="p">,</span><span class="w"> </span><span class="n">product</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w"> </span><span class="n">PIVOT</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">FOR</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">USING</span><span class="w"> </span><span class="k">MAP</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p>结果会多出一列 <code>_other</code>，包含 <code>{'Cherry': 12.0}</code> 这样的映射。</p>
+<hr>
+<h2 id="-unpivot宽表--长表">💡 UNPIVOT：宽表 → 长表
+</h2><p>反过来也很常见。比如有张月度报表：</p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>month</th>
+          <th>jan</th>
+          <th>feb</th>
+          <th>mar</th>
+          <th>apr</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>sales</td>
+          <td>100</td>
+          <td>150</td>
+          <td>120</td>
+          <td>200</td>
+      </tr>
+  </tbody>
+</table></div>
+<p>你需要把它变成每行一个月的长表，方便后续分析。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">monthly_sales</span><span class="p">(</span><span class="k">month</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">,</span><span class="w"> </span><span class="n">jan</span><span class="w"> </span><span class="n">DOUBLE</span><span class="p">,</span><span class="w"> </span><span class="n">feb</span><span class="w"> </span><span class="n">DOUBLE</span><span class="p">,</span><span class="w"> </span><span class="n">mar</span><span class="w"> </span><span class="n">DOUBLE</span><span class="p">,</span><span class="w"> </span><span class="n">apr</span><span class="w"> </span><span class="n">DOUBLE</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">monthly_sales</span><span class="w"> </span><span class="k">VALUES</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">(</span><span class="s1">&#39;sales&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">120</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">monthly_sales</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">UNPIVOT</span><span class="p">(</span><span class="n">amount</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">month</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">jan</span><span class="p">,</span><span class="w"> </span><span class="n">feb</span><span class="p">,</span><span class="w"> </span><span class="n">mar</span><span class="p">,</span><span class="w"> </span><span class="n">apr</span><span class="p">));</span><span class="w">
+</span></span></span></code></pre></div><p><strong>结果：</strong></p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>month</th>
+          <th>jan</th>
+          <th>amount</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>sales</td>
+          <td>jan</td>
+          <td>100</td>
+      </tr>
+      <tr>
+          <td>sales</td>
+          <td>feb</td>
+          <td>150</td>
+      </tr>
+      <tr>
+          <td>sales</td>
+          <td>mar</td>
+          <td>120</td>
+      </tr>
+      <tr>
+          <td>sales</td>
+          <td>apr</td>
+          <td>200</td>
+      </tr>
+  </tbody>
+</table></div>
+<h3 id="unpivot-语法拆解">UNPIVOT 语法拆解
+</h3><pre tabindex="0"><code>UNPIVOT(
   值列名          ← 哪个列存原始值？
   FOR 新列名       ← 转成什么列名表示&#34;原来的列名&#34;？
   IN (列列表)      ← 哪些列要展开？
 )
-</code></pre><h3 id=处理-null-值>处理 NULL 值</h3><p>默认情况下，UNPIVOT 会<strong>自动排除 NULL 值</strong>的行。如果你需要保留它们（比如区分"没数据"和"零"），可以先用 <code>COALESCE</code> 将 NULL 转为 0：</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SELECT</span><span class=w> </span><span class=k>month</span><span class=p>,</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>jan</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>jan</span><span class=p>,</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>feb</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>feb</span><span class=p>,</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>         </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>mar</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>mar</span><span class=p>,</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>apr</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>apr</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>FROM</span><span class=w> </span><span class=n>monthly_sales</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=n>UNPIVOT</span><span class=p>(</span><span class=n>amount</span><span class=w> </span><span class=k>FOR</span><span class=w> </span><span class=k>month</span><span class=w> </span><span class=k>IN</span><span class=w> </span><span class=p>(</span><span class=n>jan</span><span class=p>,</span><span class=w> </span><span class=n>feb</span><span class=p>,</span><span class=w> </span><span class=n>mar</span><span class=p>,</span><span class=w> </span><span class=n>apr</span><span class=p>));</span><span class=w>
-</span></span></span></code></pre></div><hr><h2 id=-实战案例客户消费画像>🚀 实战案例：客户消费画像</h2><p>回到最初的订单表，做一个完整的客户消费分析：</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=c1>-- Step 1: PIVOT 成宽表
-</span></span></span><span class=line><span class=cl><span class=k>WITH</span><span class=w> </span><span class=n>customer_matrix</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>SELECT</span><span class=w> </span><span class=n>customer</span><span class=p>,</span><span class=w> </span><span class=n>product</span><span class=p>,</span><span class=w> </span><span class=n>amount</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>orders</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>)</span><span class=w> </span><span class=n>PIVOT</span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>SUM</span><span class=p>(</span><span class=n>amount</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>FOR</span><span class=w> </span><span class=n>product</span><span class=w> </span><span class=k>IN</span><span class=w> </span><span class=p>(</span><span class=s1>&#39;Apple&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Banana&#39;</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Cherry&#39;</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>),</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=c1>-- Step 2: 加总计算
-</span></span></span><span class=line><span class=cl><span class=n>enriched</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=p>(</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>SELECT</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>customer</span><span class=p>,</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Apple</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>apple_total</span><span class=p>,</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Banana</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>banana_total</span><span class=p>,</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Cherry</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>cherry_total</span><span class=p>,</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Apple</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=o>+</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Banana</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=o>+</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Cherry</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>grand_total</span><span class=p>,</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- 最爱产品
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>CASE</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=k>WHEN</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Apple</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=o>&gt;=</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Banana</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>           </span><span class=k>AND</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Apple</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=o>&gt;=</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Cherry</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>THEN</span><span class=w> </span><span class=s1>&#39;Apple&#39;</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=k>WHEN</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Banana</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=o>&gt;=</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Apple</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>           </span><span class=k>AND</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Banana</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=o>&gt;=</span><span class=w> </span><span class=n>COALESCE</span><span class=p>(</span><span class=n>Cherry</span><span class=p>,</span><span class=w> </span><span class=mi>0</span><span class=p>)</span><span class=w> </span><span class=k>THEN</span><span class=w> </span><span class=s1>&#39;Banana&#39;</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=k>ELSE</span><span class=w> </span><span class=s1>&#39;Cherry&#39;</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>END</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>favorite_product</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=k>FROM</span><span class=w> </span><span class=n>customer_matrix</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>enriched</span><span class=w> </span><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>grand_total</span><span class=w> </span><span class=k>DESC</span><span class=p>;</span><span class=w>
-</span></span></span></code></pre></div><p><strong>结果：</strong></p><div class=table-wrapper><table><thead><tr><th>customer</th><th>apple_total</th><th>banana_total</th><th>cherry_total</th><th>grand_total</th><th>favorite_product</th></tr></thead><tbody><tr><td>Carol</td><td>9.0</td><td>6.5</td><td>15.0</td><td>30.5</td><td>Cherry</td></tr><tr><td>Alice</td><td>10.5</td><td>5.0</td><td>0</td><td>15.5</td><td>Apple</td></tr><tr><td>Bob</td><td>8.0</td><td>0</td><td>12.0</td><td>20.0</td><td>Cherry</td></tr></tbody></table></div><p><strong>一张 SQL，完成了：行列转换 → 汇总 → 特征提取，全部在数据库内完成。</strong></p><hr><h2 id=-在-python-中使用>🐍 在 Python 中使用</h2><div class=highlight><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=kn>import</span> <span class=nn>duckdb</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=c1># 连接 DuckDB</span>
-</span></span><span class=line><span class=cl><span class=n>con</span> <span class=o>=</span> <span class=n>duckdb</span><span class=o>.</span><span class=n>connect</span><span class=p>()</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=c1># 创建示例数据</span>
-</span></span><span class=line><span class=cl><span class=n>con</span><span class=o>.</span><span class=n>execute</span><span class=p>(</span><span class=s2>&#34;&#34;&#34;
-</span></span></span><span class=line><span class=cl><span class=s2>CREATE TABLE orders AS SELECT * FROM (VALUES
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Alice&#39;, &#39;Apple&#39;, 10.5),
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Alice&#39;, &#39;Banana&#39;, 5.0),
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Bob&#39;,   &#39;Apple&#39;, 8.0),
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Bob&#39;,   &#39;Cherry&#39;, 12.0),
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Carol&#39;, &#39;Banana&#39;, 6.5),
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Carol&#39;, &#39;Cherry&#39;, 15.0),
-</span></span></span><span class=line><span class=cl><span class=s2>  (&#39;Carol&#39;, &#39;Apple&#39;, 9.0)
-</span></span></span><span class=line><span class=cl><span class=s2>) AS t(customer, product, amount)
-</span></span></span><span class=line><span class=cl><span class=s2>&#34;&#34;&#34;</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=c1># PIVOT：长表变宽表</span>
-</span></span><span class=line><span class=cl><span class=n>pivot_df</span> <span class=o>=</span> <span class=n>con</span><span class=o>.</span><span class=n>execute</span><span class=p>(</span><span class=s2>&#34;&#34;&#34;
-</span></span></span><span class=line><span class=cl><span class=s2>SELECT * FROM (
-</span></span></span><span class=line><span class=cl><span class=s2>  SELECT customer, product, amount FROM orders
-</span></span></span><span class=line><span class=cl><span class=s2>) PIVOT(SUM(amount) FOR product IN (&#39;Apple&#39;, &#39;Banana&#39;, &#39;Cherry&#39;))
-</span></span></span><span class=line><span class=cl><span class=s2>ORDER BY customer
-</span></span></span><span class=line><span class=cl><span class=s2>&#34;&#34;&#34;</span><span class=p>)</span><span class=o>.</span><span class=n>df</span><span class=p>()</span>
-</span></span><span class=line><span class=cl><span class=nb>print</span><span class=p>(</span><span class=n>pivot_df</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=c1># UNPIVOT：宽表变长表</span>
-</span></span><span class=line><span class=cl><span class=n>con</span><span class=o>.</span><span class=n>execute</span><span class=p>(</span><span class=s2>&#34;&#34;&#34;
-</span></span></span><span class=line><span class=cl><span class=s2>CREATE TABLE monthly_sales(month VARCHAR, jan DOUBLE, feb DOUBLE, mar DOUBLE, apr DOUBLE);
-</span></span></span><span class=line><span class=cl><span class=s2>INSERT INTO monthly_sales VALUES (&#39;sales&#39;, 100, 150, 120, 200);
-</span></span></span><span class=line><span class=cl><span class=s2>&#34;&#34;&#34;</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=n>unpivot_df</span> <span class=o>=</span> <span class=n>con</span><span class=o>.</span><span class=n>execute</span><span class=p>(</span><span class=s2>&#34;&#34;&#34;
-</span></span></span><span class=line><span class=cl><span class=s2>SELECT * FROM monthly_sales
-</span></span></span><span class=line><span class=cl><span class=s2>UNPIVOT(amount FOR month IN (jan, feb, mar, apr))
-</span></span></span><span class=line><span class=cl><span class=s2>&#34;&#34;&#34;</span><span class=p>)</span><span class=o>.</span><span class=n>df</span><span class=p>()</span>
-</span></span><span class=line><span class=cl><span class=nb>print</span><span class=p>(</span><span class=n>unpivot_df</span><span class=p>)</span>
-</span></span></code></pre></div><p><strong>注意：</strong> 不需要 <code>import pandas</code> 做任何 pivot/melt 操作——全部交给 DuckDB 的 SQL 引擎处理，数据量大了之后性能优势非常明显。</p><hr><h2 id=-pivot-vs-传统方案对比>🧠 PIVOT vs 传统方案对比</h2><div class=table-wrapper><table><thead><tr><th>方案</th><th>PIVOT</th><th>CASE WHEN + GROUP BY</th><th>Python pivot()</th></tr></thead><tbody><tr><td>代码行数</td><td>1 条 SQL</td><td>10+ 行 SQL</td><td>3-5 行 Python</td></tr><tr><td>可读性</td><td>⭐⭐⭐</td><td>⭐⭐</td><td>⭐⭐⭐</td></tr><tr><td>大数据性能</td><td>优秀（引擎级优化）</td><td>良好</td><td>受限于内存</td></tr><tr><td>动态列名</td><td>✅ 支持子查询</td><td>❌ 需拼接 SQL</td><td>❌ 需 Python 处理</td></tr><tr><td>学习成本</td><td>低</td><td>中</td><td>中</td></tr></tbody></table></div><hr><h2 id=-互动>💬 互动</h2><p>你工作中有没有"行列互转"的痛点场景？欢迎留言分享，说不定下期就写！</p><hr><p><em>📌 收藏这条笔记，下次做数据透视报表时直接回来参考。</em></p><hr><p><em>💡 更多 DuckDB 行列转换实战技巧 → duckdblab.org</em></p></section><footer class="article-meta article-footer"><section class=article-tags><a href=/zh/tags/duckdb/>DuckDB</a>
-<a href=/zh/tags/pivot/>PIVOT</a>
-<a href=/zh/tags/unpivot/>UNPIVOT</a>
-<a href=/zh/tags/%E8%A1%8C%E5%88%97%E8%BD%AC%E6%8D%A2/>行列转换</a>
-<a href=/zh/tags/sql/>SQL</a>
-<a href=/zh/tags/%E5%AE%9E%E6%88%98/>实战</a></section><section class="article-copyright inline-meta"><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
-<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside><h2 class=section-title>相关文章</h2><div class=subsection-list><div class=article-list--tile><article><a href=/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-25%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C-sql-%E8%A1%A5%E5%85%A8%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/><div class=article-details><h2 class=article-title>📊 DuckDB 实战笔记｜2026-06-25：用 DuckDB 一行 SQL 补全时间序列</h2></div></a></article><article><a href=/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-23%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%E6%B8%85%E6%B4%97%E8%84%8F-csv-%E6%95%B0%E6%8D%AE/><div class=article-details><h2 class=article-title>📊 DuckDB 实战笔记｜2026-06-23：用 DuckDB 一行代码清洗脏 CSV 数据</h2></div></a></article><article><a href=/zh/post/duckdb-vs-sqlite-vs-postgresql%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AF%B9%E6%AF%942026/><div class=article-details><h2 class=article-title>DuckDB vs SQLite vs PostgreSQL：数据库对比（2026）</h2></div></a></article><article><a href=/zh/post/dbeaver-vs-datagrip-vs-tableplus-vs-beekeeper%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AF%B9%E6%AF%942026/><div class=article-details><h2 class=article-title>DBeaver vs DataGrip vs TablePlus vs Beekeeper：数据库客户端对比（2026）</h2></div></a></article></div></div></aside><footer class=site-footer><section class=copyright>&copy;
-2026 开发者工具对比</section><section class=powerby><a href=/en/privacy/>Privacy</a> · <a href=/en/terms/>Terms</a> · <a href=/zh/privacy/>隐私</a> · <a href=/zh/terms/>条款</a><br>使用 <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a> 构建<br>主题 <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=4.0.2>Stack</a></b> 由 <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a> 设计</section></footer><script type=module>
+</code></pre><h3 id="处理-null-值">处理 NULL 值
+</h3><p>默认情况下，UNPIVOT 会<strong>自动排除 NULL 值</strong>的行。如果你需要保留它们（比如区分&quot;没数据&quot;和&quot;零&quot;），可以先用 <code>COALESCE</code> 将 NULL 转为 0：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">month</span><span class="p">,</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">jan</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">jan</span><span class="p">,</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">feb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">feb</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">mar</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">mar</span><span class="p">,</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">apr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">apr</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">monthly_sales</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">UNPIVOT</span><span class="p">(</span><span class="n">amount</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">month</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">jan</span><span class="p">,</span><span class="w"> </span><span class="n">feb</span><span class="p">,</span><span class="w"> </span><span class="n">mar</span><span class="p">,</span><span class="w"> </span><span class="n">apr</span><span class="p">));</span><span class="w">
+</span></span></span></code></pre></div><hr>
+<h2 id="-实战案例客户消费画像">🚀 实战案例：客户消费画像
+</h2><p>回到最初的订单表，做一个完整的客户消费分析：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="c1">-- Step 1: PIVOT 成宽表
+</span></span></span><span class="line"><span class="cl"><span class="k">WITH</span><span class="w"> </span><span class="n">customer_matrix</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">customer</span><span class="p">,</span><span class="w"> </span><span class="n">product</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">)</span><span class="w"> </span><span class="n">PIVOT</span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Cherry&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">-- Step 2: 加总计算
+</span></span></span><span class="line"><span class="cl"><span class="n">enriched</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">SELECT</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">customer</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Apple</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">apple_total</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Banana</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">banana_total</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Cherry</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cherry_total</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Apple</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Banana</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Cherry</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">grand_total</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="c1">-- 最爱产品
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">CASE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">WHEN</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Apple</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Banana</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">AND</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Apple</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Cherry</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;Apple&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">WHEN</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Banana</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Apple</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">           </span><span class="k">AND</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Banana</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">COALESCE</span><span class="p">(</span><span class="n">Cherry</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="k">ELSE</span><span class="w"> </span><span class="s1">&#39;Cherry&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">favorite_product</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer_matrix</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">enriched</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">grand_total</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>结果：</strong></p>
+<div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>customer</th>
+          <th>apple_total</th>
+          <th>banana_total</th>
+          <th>cherry_total</th>
+          <th>grand_total</th>
+          <th>favorite_product</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Carol</td>
+          <td>9.0</td>
+          <td>6.5</td>
+          <td>15.0</td>
+          <td>30.5</td>
+          <td>Cherry</td>
+      </tr>
+      <tr>
+          <td>Alice</td>
+          <td>10.5</td>
+          <td>5.0</td>
+          <td>0</td>
+          <td>15.5</td>
+          <td>Apple</td>
+      </tr>
+      <tr>
+          <td>Bob</td>
+          <td>8.0</td>
+          <td>0</td>
+          <td>12.0</td>
+          <td>20.0</td>
+          <td>Cherry</td>
+      </tr>
+  </tbody>
+</table></div>
+<p><strong>一张 SQL，完成了：行列转换 → 汇总 → 特征提取，全部在数据库内完成。</strong></p>
+<hr>
+<h2 id="-在-python-中使用">🐍 在 Python 中使用
+</h2><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 连接 DuckDB</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 创建示例数据</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">CREATE TABLE orders AS SELECT * FROM (VALUES
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Alice&#39;, &#39;Apple&#39;, 10.5),
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Alice&#39;, &#39;Banana&#39;, 5.0),
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Bob&#39;,   &#39;Apple&#39;, 8.0),
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Bob&#39;,   &#39;Cherry&#39;, 12.0),
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Carol&#39;, &#39;Banana&#39;, 6.5),
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Carol&#39;, &#39;Cherry&#39;, 15.0),
+</span></span></span><span class="line"><span class="cl"><span class="s2">  (&#39;Carol&#39;, &#39;Apple&#39;, 9.0)
+</span></span></span><span class="line"><span class="cl"><span class="s2">) AS t(customer, product, amount)
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># PIVOT：长表变宽表</span>
+</span></span><span class="line"><span class="cl"><span class="n">pivot_df</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">SELECT * FROM (
+</span></span></span><span class="line"><span class="cl"><span class="s2">  SELECT customer, product, amount FROM orders
+</span></span></span><span class="line"><span class="cl"><span class="s2">) PIVOT(SUM(amount) FOR product IN (&#39;Apple&#39;, &#39;Banana&#39;, &#39;Cherry&#39;))
+</span></span></span><span class="line"><span class="cl"><span class="s2">ORDER BY customer
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">df</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">pivot_df</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># UNPIVOT：宽表变长表</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">CREATE TABLE monthly_sales(month VARCHAR, jan DOUBLE, feb DOUBLE, mar DOUBLE, apr DOUBLE);
+</span></span></span><span class="line"><span class="cl"><span class="s2">INSERT INTO monthly_sales VALUES (&#39;sales&#39;, 100, 150, 120, 200);
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">unpivot_df</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">SELECT * FROM monthly_sales
+</span></span></span><span class="line"><span class="cl"><span class="s2">UNPIVOT(amount FOR month IN (jan, feb, mar, apr))
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">df</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">unpivot_df</span><span class="p">)</span>
+</span></span></code></pre></div><p><strong>注意：</strong> 不需要 <code>import pandas</code> 做任何 pivot/melt 操作——全部交给 DuckDB 的 SQL 引擎处理，数据量大了之后性能优势非常明显。</p>
+<hr>
+<h2 id="-pivot-vs-传统方案对比">🧠 PIVOT vs 传统方案对比
+</h2><div class="table-wrapper"><table>
+  <thead>
+      <tr>
+          <th>方案</th>
+          <th>PIVOT</th>
+          <th>CASE WHEN + GROUP BY</th>
+          <th>Python pivot()</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>代码行数</td>
+          <td>1 条 SQL</td>
+          <td>10+ 行 SQL</td>
+          <td>3-5 行 Python</td>
+      </tr>
+      <tr>
+          <td>可读性</td>
+          <td>⭐⭐⭐</td>
+          <td>⭐⭐</td>
+          <td>⭐⭐⭐</td>
+      </tr>
+      <tr>
+          <td>大数据性能</td>
+          <td>优秀（引擎级优化）</td>
+          <td>良好</td>
+          <td>受限于内存</td>
+      </tr>
+      <tr>
+          <td>动态列名</td>
+          <td>✅ 支持子查询</td>
+          <td>❌ 需拼接 SQL</td>
+          <td>❌ 需 Python 处理</td>
+      </tr>
+      <tr>
+          <td>学习成本</td>
+          <td>低</td>
+          <td>中</td>
+          <td>中</td>
+      </tr>
+  </tbody>
+</table></div>
+<hr>
+<h2 id="-互动">💬 互动
+</h2><p>你工作中有没有&quot;行列互转&quot;的痛点场景？欢迎留言分享，说不定下期就写！</p>
+<hr>
+<p><em>📌 收藏这条笔记，下次做数据透视报表时直接回来参考。</em></p>
+<hr>
+<p><em>💡 更多 DuckDB 行列转换实战技巧 → duckdblab.org</em></p>
+
+</section>
+
+
+    <footer class="article-meta article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/zh/tags/duckdb/">DuckDB</a>
+        
+            <a href="/zh/tags/pivot/">PIVOT</a>
+        
+            <a href="/zh/tags/unpivot/">UNPIVOT</a>
+        
+            <a href="/zh/tags/%E8%A1%8C%E5%88%97%E8%BD%AC%E6%8D%A2/">行列转换</a>
+        
+            <a href="/zh/tags/sql/">SQL</a>
+        
+            <a href="/zh/tags/%E5%AE%9E%E6%88%98/">实战</a>
+        
+    </section>
+
+
+    
+    <section class="article-copyright inline-meta">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <path d="M14.5 9a3.5 4 0 1 0 0 6" />
+</svg>
+
+
+
+        <span>Licensed under CC BY-NC-SA 4.0</span>
+    </section>
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+<aside>
+    <h2 class="section-title">相关文章</h2>
+    <div class="subsection-list">
+        <div class="article-list--tile">
+            
+                
+<article class="">
+    <a href="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-25%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C-sql-%E8%A1%A5%E5%85%A8%E6%97%B6%E9%97%B4%E5%BA%8F%E5%88%97/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">📊 DuckDB 实战笔记｜2026-06-25：用 DuckDB 一行 SQL 补全时间序列</h2>
+        </div>
+    </a>
+</article>
+            
+                
+<article class="">
+    <a href="/zh/post/duckdb-%E5%AE%9E%E6%88%98%E7%AC%94%E8%AE%B02026-06-23%E7%94%A8-duckdb-%E4%B8%80%E8%A1%8C%E4%BB%A3%E7%A0%81%E6%B8%85%E6%B4%97%E8%84%8F-csv-%E6%95%B0%E6%8D%AE/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">📊 DuckDB 实战笔记｜2026-06-23：用 DuckDB 一行代码清洗脏 CSV 数据</h2>
+        </div>
+    </a>
+</article>
+            
+                
+<article class="">
+    <a href="/zh/post/duckdb-vs-sqlite-vs-postgresql%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AF%B9%E6%AF%942026/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">DuckDB vs SQLite vs PostgreSQL：数据库对比（2026）</h2>
+        </div>
+    </a>
+</article>
+            
+                
+<article class="">
+    <a href="/zh/post/dbeaver-vs-datagrip-vs-tableplus-vs-beekeeper%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AF%B9%E6%AF%942026/">
+        
+
+        <div class="article-details">
+            <h2 class="article-title">DBeaver vs DataGrip vs TablePlus vs Beekeeper：数据库客户端对比（2026）</h2>
+        </div>
+    </a>
+</article>
+            
+        </div>
+    </div>
+</aside>
+
+     
+    
+        
+
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2026 开发者工具对比
+    </section>
+    
+    <section class="powerby">
+        
+            <a href="/en/privacy/">Privacy</a> · <a href="/en/terms/">Terms</a> · <a href="/zh/privacy/">隐私</a> · <a href="/zh/terms/">条款</a> <br/>
+        使用 <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> 构建 <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="4.0.2">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+
+
+
+<script type="module">
     import gallery from '\/ts\/gallery.js';
 
     const articleContent = document.querySelector('.article-content');
@@ -155,4 +763,15 @@
         });
         lightbox.init();
     }
-</script></main></div><script type=text/javascript src=/ts/main.f856840516f7c2ad1769a8f5937e3d08d6cb386e2cd2dd025ae696e0ff207958.js defer></script></body></html>
+</script>
+
+    
+
+            </main>
+        </div>
+        
+<script type="text/javascript" src="/ts/main.f856840516f7c2ad1769a8f5937e3d08d6cb386e2cd2dd025ae696e0ff207958.js" defer></script>
+
+
+    </body>
+</html>
