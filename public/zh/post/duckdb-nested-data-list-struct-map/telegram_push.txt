@@ -1,0 +1,234 @@
+📊 DuckDB 实战笔记 ｜ 2026-08-18
+
+> 每天一个 DuckDB 实战技巧，让你立刻能用。
+
+---
+
+## 🔥 今日话题：嵌套数据 — LIST、STRUCT、MAP 一行解法
+
+你有没有遇到过这种场景：
+
+> 一条 API 返回的 JSON 数据里，订单包含多个商品，商品有标签数组。你只想统计「每个订单的标签分布」，用 pandas 写一堆循环，代码冗长、性能还差。
+
+**根本原因不是你的代码写得不好，而是你用了行式思维处理嵌套数据。**
+
+DuckDB 原生支持 LIST（数组）、STRUCT（结构体）、MAP（键值对）三种嵌套类型，一条 SQL 就能完成以前需要写几十行代码才能搞定的事。
+
+---
+
+## 📋 场景：订单标签分析
+
+假设你有一个订单表，每个订单包含多个商品，每个商品有标签数组：
+
+```sql
+CREATE TABLE orders AS
+SELECT * FROM (
+    VALUES
+    (1, '[{"name": "iPhone", "tags": ["电子产品", "手机", "热销"]}]'),
+    (2, '[{"name": "T恤", "tags": ["服装", "夏季"]}]'),
+    (3, '[{"name": "MacBook", "tags": ["电子产品", "电脑", "高端"]}]'),
+    (4, '[{"name": "运动鞋", "tags": ["鞋类", "运动", "夏季"]}]'),
+    (5, '[{"name": "AirPods", "tags": ["电子产品", "耳机", "热销"]}]')
+) AS t(order_id, products_json);
+```
+
+用传统方式提取所有标签？写循环、展平、去重、计数——十几行代码。
+
+**DuckDB 一行搞定：**
+
+```sql
+SELECT 
+    tag,
+    COUNT(*) AS usage_count
+FROM orders,
+     LATERAL UNNEST(
+         SELECT JSON_EXTRACT_SCALAR(product, '$.tags')
+         FROM JSON_EACH(products_json) AS e(product)
+     ) AS tags(tag)
+GROUP BY tag
+ORDER BY usage_count DESC;
+```
+
+**输出：**
+
+```
+┌──────────┬───────────────┐
+│   tag    │ usage_count   │
+├──────────┼───────────────┤
+│ 电子产品  │      3        │
+│ 热销     │      2        │
+│ 手机     │      1        │
+│ 夏季     │      2        │
+│ 运动     │      1        │
+└──────────┴───────────────┘
+```
+
+---
+
+## 💡 核心技巧一：UNNEST 展开数组
+
+LIST 类型是 DuckDB 处理嵌套数据的基石。`UNNEST` 把数组展开成行：
+
+```sql
+-- 简单数组展开
+SELECT UNNEST([1, 2, 3]) AS num;
+-- 输出: 1, 2, 3
+
+-- 带索引展开
+SELECT arr, idx FROM (
+    SELECT UNNEST(['a', 'b', 'c']) AS arr WITH ORDINALITY AS idx
+) t;
+```
+
+**实战场景：** 一个字段存多个标签，每个标签单独一行：
+
+```sql
+SELECT 
+    order_id,
+    tag
+FROM orders,
+     UNNEST(tags) AS tag;
+```
+
+---
+
+## 💡 核心技巧二：STRUCT 嵌套查询
+
+STRUCT 让你像访问对象属性一样访问嵌套字段：
+
+```sql
+-- 创建带 STRUCT 的表
+CREATE TABLE employees AS
+SELECT * FROM (
+    VALUES
+    (1, STRUCT('张三', 30, ['Python', 'SQL'])),
+    (2, STRUCT('李四', 25, ['Java', 'Go'])),
+    (3, STRUCT('王五', 35, ['Python', 'R']))
+) AS t(id, info);
+
+-- 访问嵌套字段
+SELECT 
+    info.name AS 姓名,
+    info.age AS 年龄,
+    info.skills[1] AS 第一技能
+FROM employees;
+```
+
+**输出：**
+
+```
+┌───────┬──────┬──────────┐
+│ 姓名  │ 年龄 │ 第一技能 │
+├───────┼──────┼──────────┤
+│ 张三  │ 30   │ Python   │
+│ 李四  │ 25   │ Java     │
+│ 王五  │ 35   │ Python   │
+└───────┴──────┴──────────┘
+```
+
+---
+
+## 💡 核心技巧三：MAP 键值对查询
+
+MAP 适合处理动态字段或不规则结构：
+
+```sql
+-- 创建带 MAP 的表
+CREATE TABLE config AS
+SELECT * FROM (
+    VALUES
+    (1, MAP({'theme': 'dark', 'lang': 'zh', 'notifications': 'true'})),
+    (2, MAP({'theme': 'light', 'lang': 'en', 'notifications': 'false'})),
+    (3, MAP({'theme': 'dark', 'lang': 'ja', 'notifications': 'true'}))
+) AS t(user_id, settings);
+
+-- 查询特定键
+SELECT 
+    user_id,
+    settings['theme'] AS 主题,
+    settings['lang'] AS 语言
+FROM config;
+
+-- 过滤：主题是 dark 的用户
+SELECT * FROM config 
+WHERE settings['theme'] = 'dark';
+```
+
+---
+
+## 🚀 实战技巧：从 JSON API 直接提取嵌套数据
+
+大多数 API 返回 JSON，DuckDB 可以直接读取并提取嵌套字段：
+
+```sql
+-- 直接读取 JSON 并提取嵌套结构
+SELECT 
+    order_id,
+    items.name AS 商品名,
+    items.price AS 价格,
+    items.tags[1] AS 主标签
+FROM read_json_auto('/data/orders.json'),
+     LATERAL items AS items;
+```
+
+**不需要先解析 JSON 再转表——DuckDB 在查询时自动展开。**
+
+---
+
+## 🧠 嵌套数据完整对比
+
+| 类型 | 语法 | 适用场景 |
+|------|------|---------|
+| LIST | `[1, 2, 3]` 或 `ARRAY[1, 2, 3]` | 数组、标签、列表 |
+| STRUCT | `STRUCT(a := 1, b := 'hello')` | 对象、记录、固定结构 |
+| MAP | `MAP({'key': 'value'})` | 动态字段、配置、不规则数据 |
+
+**联合使用示例：**
+
+```sql
+-- LIST + STRUCT：商品列表
+CREATE TABLE orders AS
+SELECT * FROM (
+    VALUES
+    (1, [
+        STRUCT('iPhone', 7999.00, ['电子产品', '热销']),
+        STRUCT('保护壳', 99.00, ['配件'])
+    ])
+) AS t(order_id, items);
+
+-- 查询：每个订单的总价
+SELECT 
+    order_id,
+    SUM(item.price) AS total
+FROM orders,
+     UNNEST(items) AS item
+GROUP BY order_id;
+```
+
+---
+
+## 📝 小结
+
+| 技能 | 一句话总结 |
+|------|-----------|
+| UNNEST 展开 | `UNNEST(array)` 把数组变行 |
+| STRUCT 访问 | `struct.field` 像点属性一样访问嵌套字段 |
+| MAP 查询 | `map['key']` 动态取键值 |
+| JSON 直读 | `read_json_auto()` + LATERAL 直接展开嵌套 |
+| 联合使用 | LIST + STRUCT + MAP 可以无限嵌套 |
+
+**DuckDB + 嵌套数据让你：原来需要写 50 行 Python 的代码，一条 SQL 搞定。不是功能多，是不用把数据 flatten 了再处理。**
+
+---
+
+## 💬 互动
+
+你的数据里有没有「一个字段存多个值」的痛点？把数据结构发出来，我们一起看看 DuckDB 怎么用一条 SQL 搞定！
+
+---
+
+📌 收藏这条笔记，下次处理嵌套数据时直接回来参考。
+
+---
+
+🔍 想系统学习 DuckDB 实战技巧？duckdblab.org 上有完整教程系列，从基础查询到嵌套数据结构高级用法，带你成为 DuckDB 实战专家。
