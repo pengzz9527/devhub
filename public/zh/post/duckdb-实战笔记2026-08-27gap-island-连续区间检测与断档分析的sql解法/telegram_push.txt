@@ -1,0 +1,137 @@
+📊 DuckDB 实战笔记 ｜ 2026-08-27
+
+> 每天一个 DuckDB 实战技巧，让你立刻能用。
+
+---
+
+## 🔥 今日话题：Gap 和 Island 问题 — 连续区间检测与断档分析的 SQL 解法
+
+你有没有遇到过这种场景：
+
+> 用户登录日志表里，你需要统计「每个用户最长连续登录天数」。或者价格表中，你要找出「价格连续上涨的天数区间」。
+>
+> 用 Python 写？先排序、再遍历、标记连续段……代码二十行起步，还容易出错。
+
+**这是经典的「Gap 和 Island」问题。**
+
+- **Island（岛）**：连续满足条件的数据段
+- **Gap（间隙）**：不满足条件的间隔
+
+DuckDB 用窗口函数，**一条 SQL 就能精准识别所有连续区间**。
+
+---
+
+## 📋 场景一：连续登录天数统计
+
+```sql
+CREATE TABLE login_log AS
+SELECT * FROM (VALUES
+    (1, DATE '2026-08-01'), (1, DATE '2026-08-02'),
+    (1, DATE '2026-08-03'), (1, DATE '2026-08-05'),
+    (1, DATE '2026-08-06'), (2, DATE '2026-08-01'),
+    (2, DATE '2026-08-03'), (2, DATE '2026-08-04'),
+    (2, DATE '2026-08-05'), (2, DATE '2026-08-07'),
+    (2, DATE '2026-08-08')
+) AS t(user_id, login_date);
+```
+
+**核心：差值法**
+
+```sql
+WITH numbered AS (
+    SELECT user_id, login_date,
+           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY login_date) AS rn
+    FROM login_log
+),
+grouped AS (
+    SELECT user_id, login_date,
+           login_date - INTERVAL (rn) DAY AS grp
+    FROM numbered
+)
+SELECT user_id,
+       MIN(login_date) AS start_date,
+       MAX(login_date) AS end_date,
+       COUNT(*) AS consecutive_days
+FROM grouped
+GROUP BY user_id, grp
+ORDER BY user_id, start_date;
+```
+
+**输出：**
+
+```
+┌──────────┬────────────┬────────────┬──────────────────┐
+│ user_id  │ start_date │ end_date   │ consecutive_days │
+├──────────┼────────────┼────────────┼──────────────────┤
+│ 1        │ 2026-08-01 │ 2026-08-03 │       3          │
+│ 1        │ 2026-08-05 │ 2026-08-06 │       2          │
+│ 2        │ 2026-08-01 │ 2026-08-01 │       1          │
+│ 2        │ 2026-08-03 │ 2026-08-05 │       3          │
+│ 2        │ 2026-08-07 │ 2026-08-08 │       2          │
+└──────────┴────────────┴────────────┴──────────────────┘
+```
+
+---
+
+## 💡 通用模板
+
+```
+连续组的标识 = 排序列 - ROW_NUMBER() OVER (PARTITION BY 分组列 ORDER BY 排序列)
+```
+
+只要这个标识相同，这些行就是连续的。
+
+---
+
+## 📋 场景二：设备在线/离线状态分析
+
+```sql
+WITH numbered AS (
+    SELECT device_id, ts, status,
+           ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY ts) AS rn
+    FROM device_status
+),
+grouped AS (
+    SELECT device_id, ts, status,
+           status || '_' || (rn - ROW_NUMBER() OVER (
+               PARTITION BY device_id, status ORDER BY ts
+           )) AS grp
+    FROM numbered
+)
+SELECT device_id, status,
+       MIN(ts) AS start_time,
+       MAX(ts) AS end_time,
+       COUNT(*) AS duration_minutes
+FROM grouped
+GROUP BY device_id, status, grp;
+```
+
+---
+
+## 🚀 只关注特定 Island
+
+```sql
+-- 先过滤，再编号
+WHERE change > 0
+-- 最后限制最小长度
+HAVING COUNT(*) >= 3
+```
+
+---
+
+## 📝 小结
+
+| 技能 | 一句话总结 |
+|------|-----------|
+| 差值法核心 | `排序列 - ROW_NUMBER()` 相同 → 连续同组 |
+| 通用模板 | 编号 → 差值分组 → 聚合 |
+| 过滤前置 | 只需要特定 Island？先 WHERE 再编号 |
+| 有界区间 | `HAVING COUNT(*) >= N` 过滤太短的 Island |
+
+**一条 SQL 搞定连续区间分析，再也不用写 Python 循环了。**
+
+---
+
+📌 收藏这条笔记，下次遇到连续区间分析问题时直接回来参考。
+
+🔍 想系统学习 DuckDB？[duckdblab.org](https://duckdblab.org)
